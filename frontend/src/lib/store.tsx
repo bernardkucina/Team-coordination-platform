@@ -2,12 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import type {
-  AppData, AttendanceRecord, AttendanceStatus, HistoryEntry, Meeting, MeetingSeries, Member, Project, Role, Task, TimeEntry, Tracking,
-  UpdateTaskRequest, WorkTimer,
+  AppData, AttendanceRecord, AttendanceStatus, CalendarSyncStatus, HistoryEntry, Meeting, MeetingSeries, Member, Project, Role, Task,
+  TimeEntry, Tracking, UpdateTaskRequest, WorkTimer,
 } from './types';
 import { ApiFailure, api } from './api';
 import { DEMO_TODAY, fromMin, setClock, tickClock, toMin } from './time';
 import { SignIn } from '@/components/SignIn';
+import { AccessConsole } from '@/components/AccessConsole';
 
 export interface AppState {
   role: Role;
@@ -22,6 +23,8 @@ export interface AppState {
   timeEntries: TimeEntry[];
   tracking: Tracking | null;
   workTimer: WorkTimer | null;
+  /** Admins only: the last calendar sync. */
+  calendar: CalendarSyncStatus | null;
   /** Id of the time entry that was just added or edited, to highlight it. */
   lastEntryId: number | null;
   /** Id for the next optimistic change. Negative, so it never clashes with the server's ids. */
@@ -37,10 +40,15 @@ export type Action =
   | { type: 'toast'; text: string | null }
   | { type: 'logTime'; entry: Omit<TimeEntry, 'id'> }
   | { type: 'editTime'; id: number; start: string; end: string }
+  | { type: 'deleteTime'; id: number }
   | { type: 'startTracking'; tracking: Tracking }
   | { type: 'setTrackingMode'; mode: Tracking['mode'] }
   | { type: 'stopTracking'; end: string; projectId: string }
-  | { type: 'setAttendance'; meetingId: string; memberId: string; status: AttendanceStatus; source: AttendanceRecord['source']; at?: string }
+  | { type: 'setAttendance'; meetingId: string; memberId: string; status: AttendanceStatus; source: AttendanceRecord['source']; at?: string; reason?: string }
+  /** Takes back your own "can't come" before the meeting. */
+  | { type: 'unexcuseSelf'; meetingId: string; memberId: string }
+  /** "Did you attend?" after a meeting you did not clock in to. */
+  | { type: 'reportAttendance'; meetingId: string; memberId: string; answer: 'present' | 'remote' | 'absent'; reason?: string }
   | { type: 'fillPresent'; meetingId: string }
   | { type: 'markRecorded'; meetingId: string }
   | { type: 'updateTask'; taskId: number; patch: Partial<Task>; who: string; text: string }
@@ -55,8 +63,10 @@ export interface NewProject {
   name: string;
   description: string;
   lead: string;
+  deadline: string | null;
+  neededRoles: string[];
   workstreams: string[];
-  tasks: { title: string; workstream: string; owner: string | null }[];
+  tasks: { title: string; workstream: string; owner: string | null; due: string | null }[];
 }
 
 const WORKSTREAM_COLORS = ['#D9C2F0', '#B8E0D2', '#F5B8D9', '#FFD6A5', '#BDE0FE', '#CDE8A6', '#F7E38A'];
@@ -76,6 +86,7 @@ const fromData = (data: AppData): Omit<AppState, 'lastEntryId' | 'nextId' | 'toa
   timeEntries: data.timeEntries,
   tracking: data.tracking,
   workTimer: data.workTimer,
+  calendar: data.calendar ?? null,
 });
 
 const upsertAttendance = (list: AttendanceRecord[], rec: AttendanceRecord): AttendanceRecord[] => [
@@ -97,6 +108,18 @@ function reducer(state: AppState, action: Action): AppState {
       const id = state.nextId;
       return { ...state, timeEntries: [{ ...action.entry, id }, ...state.timeEntries], lastEntryId: id, nextId: id + 1 };
     }
+    case 'deleteTime':
+      return { ...state, timeEntries: state.timeEntries.filter((e) => e.id !== action.id) };
+    case 'unexcuseSelf':
+      return { ...state, attendance: state.attendance.filter((r) => !(r.meetingId === action.meetingId && r.memberId === action.memberId)) };
+    case 'reportAttendance':
+      return {
+        ...state,
+        attendance: upsertAttendance(state.attendance, {
+          meetingId: action.meetingId, memberId: action.memberId, source: 'self',
+          status: action.answer === 'absent' ? 'excused' : action.answer, ...(action.reason ? { reason: action.reason } : {}),
+        }),
+      };
     case 'editTime':
       return {
         ...state,
@@ -138,6 +161,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         attendance: upsertAttendance(state.attendance, {
           meetingId: action.meetingId, memberId: action.memberId, status: action.status, source: action.source, at: action.at,
+          ...(action.reason ? { reason: action.reason } : {}),
         }),
         meetings: state.meetings.map((m) => (m.id === action.meetingId && action.source === 'admin' ? { ...m, recorded: false } : m)),
       };
@@ -192,14 +216,14 @@ function reducer(state: AppState, action: Action): AppState {
       let nextId = state.nextId + 1;
       const tasks: Task[] = p.tasks.map((t) => ({
         id: nextId++, projectId: id, title: t.title, workstream: names.includes(t.workstream) ? t.workstream : names[0],
-        status: 'priority', owner: t.owner, helpers: [], priority: 'Medium', startWeek: null, endWeek: null, due: null,
-        notes: '', links: [], history: [{ id: `h${nextId}`, who: action.who, text: 'created this task with the project', when: 'just now' }],
+        status: 'priority', owner: t.owner, helpers: [], priority: 'Medium', startWeek: null, endWeek: null,
+        due: t.due, notes: '', links: [], history: [{ id: `h${nextId}`, who: action.who, text: 'created this task with the project', when: 'just now' }],
       }));
       return {
         ...state,
         nextId,
         projects: [...state.projects, {
-          id, name: p.name, description: p.description, lead: p.lead,
+          id, name: p.name, description: p.description, lead: p.lead, deadline: p.deadline, neededRoles: p.neededRoles,
           workstreams: names.map((name, i) => ({ name, color: WORKSTREAM_COLORS[i % WORKSTREAM_COLORS.length], lead: p.lead, doneEarlier: 0 })),
         }],
         tasks: [...state.tasks, ...tasks],
@@ -254,14 +278,17 @@ const taskPatch = (patch: Partial<Task>): UpdateTaskRequest =>
 const persist = async (action: Action): Promise<number | null> => {
   switch (action.type) {
     case 'logTime': {
-      const { projectId, date, start, end, note } = action.entry;
-      return (await api.logTime({ projectId, date, start, end, note })).id;
+      const { projectId, date, start, end, note, location } = action.entry;
+      return (await api.logTime({ projectId, date, start, end, note, ...(location ? { location } : {}) })).id;
     }
     case 'editTime':
       if (action.id < 0) return null;
       return (await api.editTime(action.id, { start: action.start, end: action.end })).id;
+    case 'deleteTime':
+      if (action.id > 0) await api.deleteTime(action.id);
+      return null;
     case 'startWork':
-      await api.startWork(action.timer.projectId);
+      await api.startWork(action.timer.projectId, action.timer.location ?? undefined);
       return null;
     case 'stopWork':
       return (await api.stopWork()).entry?.id ?? null;
@@ -277,8 +304,14 @@ const persist = async (action: Action): Promise<number | null> => {
       if (action.source === 'admin') {
         await api.recordMeeting(action.meetingId, { records: [{ memberId: action.memberId, status: action.status }], recorded: false });
       } else if (action.status !== 'missed') {
-        await api.markSelf(action.meetingId, { status: action.status });
+        await api.markSelf(action.meetingId, { status: action.status, ...(action.reason ? { reason: action.reason } : {}) });
       }
+      return null;
+    case 'unexcuseSelf':
+      await api.unmarkSelf(action.meetingId);
+      return null;
+    case 'reportAttendance':
+      await api.reportAttendance(action.meetingId, { status: action.answer, ...(action.reason ? { reason: action.reason } : {}) });
       return null;
     case 'fillPresent':
       await api.fillPresent(action.meetingId);
@@ -302,7 +335,10 @@ const persist = async (action: Action): Promise<number | null> => {
     }
     case 'addProject': {
       const p = action.project;
-      await api.createProject({ name: p.name, description: p.description, lead: p.lead || undefined, workstreams: p.workstreams, tasks: p.tasks });
+      await api.createProject({
+        name: p.name, description: p.description, lead: p.lead || undefined, deadline: p.deadline, neededRoles: p.neededRoles,
+        workstreams: p.workstreams, tasks: p.tasks,
+      });
       return null;
     }
     case 'addWorkstream':
@@ -326,14 +362,17 @@ interface StoreValue {
   isAdmin: boolean;
   memberName: (id: string | null) => string;
   flash: (text: string) => void;
-  /** Sandbox sign-in (DEMO_MODE) with a roster email. */
-  signIn: (email: string) => Promise<void>;
+  /** Sign in with an email (roster members in DEMO_MODE) or the super admin's email and password. */
+  signIn: (email: string, password?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Admins: read the calendar again now. */
+  syncCalendar: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-type Status = 'loading' | 'signed-out' | 'ready' | 'error';
+/** 'superadmin': the super admin is signed in; it only gets the access console. */
+type Status = 'loading' | 'signed-out' | 'ready' | 'superadmin' | 'error';
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
@@ -343,7 +382,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const pending = useRef(0);
   const highlight = useRef<number | null>(null);
 
-  /** Loads everything from the server. A 401 shows the sign-in screen. */
+  /** Loads everything from the server. A 401 shows the sign-in screen, the super admin gets the access console. */
   const refresh = useCallback(async () => {
     try {
       const data = await api.bootstrap();
@@ -354,6 +393,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       if (err instanceof ApiFailure && err.status === 401) {
         setStatus('signed-out');
+      } else if (err instanceof ApiFailure && err.status === 403 && (await api.session().catch(() => null))?.kind === 'superadmin') {
+        setStatus('superadmin');
       } else {
         setLoadError(err instanceof Error ? err.message : String(err));
         setStatus('error');
@@ -409,8 +450,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [state?.toast]);
 
-  const signIn = useCallback(async (email: string) => {
-    await api.demoLogin(email);
+  const signIn = useCallback(async (email: string, password?: string) => {
+    const session = await api.login(email, password);
+    if (session.kind === 'superadmin') {
+      setStatus('superadmin');
+      return;
+    }
     setStatus('loading');
     await refresh();
   }, [refresh]);
@@ -419,6 +464,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await api.logout();
     setStatus('signed-out');
   }, []);
+
+  const syncCalendar = useCallback(async () => {
+    try {
+      const status = await api.syncCalendar();
+      flash(status.error ? `Calendar sync failed: ${status.error}` : `Calendar synced: ${status.result ?? 'done'}`);
+    } catch (err) {
+      flash(err instanceof Error ? err.message : 'Calendar sync failed.');
+    }
+    await refresh();
+  }, [flash, refresh]);
 
   const value = useMemo<StoreValue | null>(() => {
     if (!state) return null;
@@ -432,10 +487,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       flash,
       signIn,
       signOut,
+      syncCalendar,
     };
-  }, [state, dispatch, flash, signIn, signOut]);
+  }, [state, dispatch, flash, signIn, signOut, syncCalendar]);
 
   if (status === 'signed-out') return <SignIn onSignIn={signIn} />;
+  if (status === 'superadmin') return <AccessConsole onSignOut={signOut} />;
   if (status === 'error') {
     return (
       <div className="signin">

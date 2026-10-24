@@ -4,7 +4,7 @@
  */
 import type {
   AttendanceRecord, AttendanceStatus, Meeting, MeetingSeries, Member, Priority, Project, Role, Task, TaskLink,
-  TaskStatus, Tier, TimeEntry, Tracking, WorkTimer,
+  TaskStatus, Tier, TimeEntry, Tracking, WorkLocation, WorkTimer,
 } from './domain';
 
 export interface ApiError {
@@ -14,16 +14,22 @@ export interface ApiError {
 
 /* ---------- members (auth + people) ---------- */
 
-/** POST /api/auth/demo-login (only when DEMO_MODE=true): sign in with a roster email, no password. */
-export interface DemoLoginRequest {
+/**
+ * POST /api/auth/login. Members sign in with their roster email and no password (only while DEMO_MODE=true).
+ * The super admin's email needs a password: without one the API answers 401 with details.needsPassword = true.
+ */
+export interface LoginRequest {
   email: string;
+  password?: string;
 }
 
-/** POST /api/auth/demo-login */
-export interface LoginResponse {
-  memberId: string;
-  role: Role;
-}
+/** Who is signed in. The super admin is not a member: it only manages access (see /api/access). */
+export type SessionInfo =
+  | { kind: 'member'; memberId: string; role: Role }
+  | { kind: 'superadmin'; name: string };
+
+/** POST /api/auth/login */
+export type LoginResponse = SessionInfo;
 
 /** GET /api/me */
 export interface MeResponse {
@@ -31,10 +37,34 @@ export interface MeResponse {
   role: Role;
 }
 
-/** PATCH /api/members/:id (admin). GET /api/members returns Member[]. */
+/** PATCH /api/members/:id (admin): change a member's tier. Roles and access belong to the super admin. */
 export interface UpdateMemberRequest {
   tier?: Tier;
-  isAdmin?: boolean;
+}
+
+/* ---------- access (super admin only) ---------- */
+
+/** GET /api/access/members: everyone, including inactive members. */
+export interface AccessMember {
+  id: string;
+  name: string;
+  email: string;
+  tier: Tier;
+  role: Role;
+  active: boolean;
+}
+
+/** POST /api/access/members: give a new person access. */
+export interface CreateAccessMemberRequest {
+  name: string;
+  email: string;
+  tier: Tier;
+  role?: Role;
+}
+
+/** PATCH /api/access/members/:id: make admin or member, or switch access off and on. */
+export interface UpdateAccessRequest {
+  role?: Role;
   active?: boolean;
 }
 
@@ -54,6 +84,8 @@ export interface AppData {
   timeEntries: TimeEntry[];
   tracking: Tracking | null;
   workTimer: WorkTimer | null;
+  /** Admins only: the last calendar sync. */
+  calendar?: CalendarSyncStatus;
 }
 
 /* ---------- projects ---------- */
@@ -62,9 +94,14 @@ export interface AppData {
 export interface CreateProjectRequest {
   name: string;
   description?: string;
+  /** The project owner. */
   lead?: string;
+  /** ISO date. */
+  deadline?: string | null;
+  /** Who the project will need, e.g. ["Tech", "Marketing"]. */
+  neededRoles?: string[];
   workstreams?: string[];
-  tasks?: { title: string; workstream: string; owner: string | null }[];
+  tasks?: { title: string; workstream: string; owner: string | null; due?: string | null }[];
 }
 
 /** POST /api/projects/:id/workstreams (admin or project lead) */
@@ -108,6 +145,7 @@ export interface CreateTimeEntryRequest {
   start: string;
   end: string;
   note?: string;
+  location?: WorkLocation;
   /** Admins only: log for someone else. */
   memberId?: string;
 }
@@ -119,6 +157,7 @@ export interface UpdateTimeEntryRequest {
   start?: string;
   end?: string;
   note?: string;
+  location?: WorkLocation;
 }
 
 export type PaceStatus = 'met' | 'on-track' | 'behind';
@@ -138,6 +177,7 @@ export interface HoursSummary {
 /** POST /api/timers/work/start */
 export interface StartWorkRequest {
   projectId: string;
+  location?: WorkLocation;
 }
 
 /** POST /api/timers/meeting/start: clocks in to the meeting and starts its timer. */
@@ -167,9 +207,33 @@ export interface TimersResponse {
 
 /* ---------- attendance ---------- */
 
-/** POST /api/meetings/:id/attendance/self: clock in, switch to remote, or say "can't come". */
+/**
+ * POST /api/meetings/:id/attendance/self: clock in or switch to remote while clock-in is open,
+ * or "can't come" (excused, with an optional reason) before the meeting starts.
+ * DELETE the same path takes back a "can't come" before the meeting starts.
+ */
 export interface SelfAttendanceRequest {
   status: Extract<AttendanceStatus, 'present' | 'remote' | 'excused'>;
+  reason?: string;
+}
+
+/**
+ * POST /api/meetings/:id/attendance/report: "Did you attend?" after a meeting the member did not clock in to.
+ * Allowed for 7 days after it ended, until an admin records the member. "absent" needs a reason and is stored
+ * as excused; an admin can still change it.
+ */
+export interface AttendanceReportRequest {
+  status: 'present' | 'remote' | 'absent';
+  reason?: string;
+}
+
+/** GET /api/calendar/status, POST /api/calendar/sync (admin) */
+export interface CalendarSyncStatus {
+  /** CALENDAR_ICS_URL is set. */
+  configured: boolean;
+  syncedAt: string | null;
+  result: string | null;
+  error: string | null;
 }
 
 /** PUT /api/meetings/:id/attendance (admin): record or correct a whole meeting at once. */
@@ -214,6 +278,9 @@ export interface MemberAnalyticsRow {
   tasksOpen: number;
   tasksDone: number;
   tasksDoneThisWeek: number;
+  /** This week's hours by where they were worked (hours without a location are in neither). */
+  hubHours: number;
+  remoteHours: number;
   /** Under half the commitment in each of the last two finished weeks and missed a meeting in them. */
   drifting: boolean;
   /** On pace and took initiative this month (picked up or proposed at least 2 tasks). */

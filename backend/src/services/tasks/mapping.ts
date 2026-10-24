@@ -44,6 +44,8 @@ export const toProject = (p: DbProject): Project => ({
   description: p.description,
   lead: p.leadId ?? undefined,
   workstreams: p.workstreams.map((w) => ({ name: w.name, color: w.color, lead: w.leadId ?? '', doneEarlier: w.doneEarlier })),
+  deadline: p.deadline ? fromDbDate(p.deadline) : null,
+  neededRoles: p.neededRoles,
 });
 
 export const WORKSTREAM_COLORS = ['#D9C2F0', '#B8E0D2', '#F5B8D9', '#FFD6A5', '#BDE0FE', '#CDE8A6', '#F7E38A'];

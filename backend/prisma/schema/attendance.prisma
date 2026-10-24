@@ -21,6 +21,8 @@ model AttendanceRecord {
   status      AttendanceStatus
   source      AttendanceSource
   clockedInAt DateTime?
+  /// Why the member could not come (given before the meeting or when answering "did you attend?").
+  reason      String?
   updatedAt   DateTime         @updatedAt
 
   @@id([meetingId, memberId])

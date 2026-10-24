@@ -69,3 +69,9 @@ export const importCalendarEvents = async (events: CalendarEvent[]): Promise<{ s
   }
   return { series: seriesIds.size, meetings, skipped };
 };
+
+/** Adds a member to every hub-wide series (projectId null, e.g. Community), which includes everyone. */
+export const addToHubWideSeries = async (memberId: string): Promise<void> => {
+  const hubWide = await db.meetingSeries.findMany({ where: { projectId: null }, select: { id: true } });
+  await db.seriesMember.createMany({ data: hubWide.map((s) => ({ seriesId: s.id, memberId })), skipDuplicates: true });
+};

@@ -5,7 +5,7 @@ import { localParts, now } from '../../core/clock';
 import { badRequest, forbidden } from '../../core/errors';
 import type { SessionMember } from '../../core/auth';
 import { getMeetingRow, getSeries, isInvited, setRecorded, toMeeting } from '../meetings';
-import { canClockIn, canExcuse } from './rules';
+import { canClockIn, canExcuse, canReport } from './rules';
 
 export const toRecord = (r: DbRecord): AttendanceRecord => ({
   meetingId: r.meetingId,
@@ -13,6 +13,7 @@ export const toRecord = (r: DbRecord): AttendanceRecord => ({
   status: r.status,
   source: r.source,
   ...(r.clockedInAt ? { at: localParts(r.clockedInAt).time } : {}),
+  ...(r.reason ? { reason: r.reason } : {}),
 });
 
 export const listRecords = async (filter: { meetingIds?: string[]; memberId?: string } = {}): Promise<AttendanceRecord[]> =>
@@ -31,7 +32,9 @@ export const meetingDetail = async (meetingId: string): Promise<MeetingDetail> =
  * A member marks their own attendance: "I'm here" or "Remote" while clock-in is open,
  * or "can't come" (excused) before the meeting starts.
  */
-export const markSelf = async (meetingId: string, member: SessionMember, status: 'present' | 'remote' | 'excused'): Promise<AttendanceRecord> => {
+export const markSelf = async (
+  meetingId: string, member: SessionMember, status: 'present' | 'remote' | 'excused', reason?: string,
+): Promise<AttendanceRecord> => {
   const meeting = await getMeetingRow(meetingId);
   if (!(await isInvited(meeting, member.id))) throw forbidden('You are not invited to this meeting.');
   const at = now();
@@ -40,10 +43,41 @@ export const markSelf = async (meetingId: string, member: SessionMember, status:
 
   const existing = await db.attendanceRecord.findUnique({ where: { meetingId_memberId: { meetingId, memberId: member.id } } });
   const clockedInAt = status === 'excused' ? null : (existing?.clockedInAt ?? at);
+  const why = status === 'excused' ? reason?.trim() || null : null;
   const record = await db.attendanceRecord.upsert({
     where: { meetingId_memberId: { meetingId, memberId: member.id } },
-    create: { meetingId, memberId: member.id, status, source: 'self', clockedInAt },
-    update: { status, source: 'self', clockedInAt },
+    create: { meetingId, memberId: member.id, status, source: 'self', clockedInAt, reason: why },
+    update: { status, source: 'self', clockedInAt, reason: why },
+  });
+  return toRecord(record);
+};
+
+/** Takes back a "can't come" before the meeting starts. */
+export const unmarkSelf = async (meetingId: string, member: SessionMember): Promise<void> => {
+  const meeting = await getMeetingRow(meetingId);
+  if (!canExcuse(meeting, now())) throw badRequest('The meeting has started; ask an admin to change your attendance.');
+  await db.attendanceRecord.deleteMany({ where: { meetingId, memberId: member.id, source: 'self', status: 'excused' } });
+};
+
+/**
+ * "Did you attend?" after a meeting the member did not clock in to: in person, online, or not (with a reason,
+ * stored as excused). Open for a week after the meeting, and only until an admin has recorded the member.
+ */
+export const reportAttendance = async (
+  meetingId: string, member: SessionMember, answer: 'present' | 'remote' | 'absent', reason?: string,
+): Promise<AttendanceRecord> => {
+  const meeting = await getMeetingRow(meetingId);
+  if (!(await isInvited(meeting, member.id))) throw forbidden('You are not invited to this meeting.');
+  if (!canReport(meeting, now())) throw badRequest('You can answer for a week after the meeting ends.');
+  const existing = await db.attendanceRecord.findUnique({ where: { meetingId_memberId: { meetingId, memberId: member.id } } });
+  if (existing?.source === 'admin') throw badRequest('An admin has already recorded your attendance.');
+  const why = reason?.trim() || null;
+  if (answer === 'absent' && !why) throw badRequest('Tell us why you could not come.');
+  const status = answer === 'absent' ? 'excused' : answer;
+  const record = await db.attendanceRecord.upsert({
+    where: { meetingId_memberId: { meetingId, memberId: member.id } },
+    create: { meetingId, memberId: member.id, status, source: 'self', reason: answer === 'absent' ? why : null },
+    update: { status, source: 'self', reason: answer === 'absent' ? why : null },
   });
   return toRecord(record);
 };

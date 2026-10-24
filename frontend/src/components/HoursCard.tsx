@@ -2,16 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { TIER_HOURS } from '@/lib/types';
+import { TIER_HOURS, type WorkLocation } from '@/lib/types';
 import { MEMBER_LOG_DAYS_BACK, entryMinutes, paceStatus, weekHours } from '@/lib/rules';
 import { CURRENT_WEEK, DEMO_TODAY, addDays, dayLabel, durText, hoursText, nowHM, pad, toMin, weekOf } from '@/lib/time';
 import { Icon, Progress } from './ui';
 
 const STATUS_TEXT = { met: 'Commitment met', 'on-track': 'On track', behind: 'Behind pace' } as const;
+const WHERE_TEXT = { hub: 'in the hub', remote: 'remote' } as const;
 
 export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
   const { state, dispatch, me, isAdmin, flash } = useStore();
   const [projectId, setProjectId] = useState(state.projects[0].id);
+  // Where the work happens; the brief's leader wants to see time in the hub versus remote.
+  const [where, setWhere] = useState<WorkLocation>('hub');
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [daysBack, setDaysBack] = useState(0);
   const [manualStart, setManualStart] = useState('');
@@ -37,8 +41,8 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
     .sort((a, b) => b.date.localeCompare(a.date) || toMin(b.start) - toMin(a.start));
 
   const startTimer = () => {
-    dispatch({ type: 'startWork', timer: { memberId: me.id, projectId, at: nowHM(), startedAt: Date.now() } });
-    flash(`Tracking time on ${projectName(projectId)}`);
+    dispatch({ type: 'startWork', timer: { memberId: me.id, projectId, at: nowHM(), startedAt: Date.now(), location: where } });
+    flash(`Tracking time on ${projectName(projectId)}, ${WHERE_TEXT[where]}`);
   };
 
   const stopTimer = () => {
@@ -54,7 +58,7 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
       return;
     }
     const date = addDays(DEMO_TODAY, -daysBack);
-    dispatch({ type: 'logTime', entry: { memberId: me.id, projectId, date, start: manualStart, end: manualEnd, note: '', source: 'manual' } });
+    dispatch({ type: 'logTime', entry: { memberId: me.id, projectId, date, start: manualStart, end: manualEnd, note: '', source: 'manual', location: where } });
     flash(`Logged ${manualStart} – ${manualEnd} on ${projectName(projectId)}`);
     setManualOpen(false);
     setManualStart('');
@@ -86,7 +90,7 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
       {timer ? (
         <div className="inline" style={{ justifyContent: 'space-between', padding: 14, borderRadius: 12, background: 'var(--navy)', color: '#fff' }}>
           <span className="stack" style={{ gap: 2 }}>
-            <span className="tiny" style={{ color: '#b8c0db' }}>Tracking · {projectName(timer.projectId)} · since {timer.at}</span>
+            <span className="tiny" style={{ color: '#b8c0db' }}>Tracking · {projectName(timer.projectId)}{timer.location ? ` · ${WHERE_TEXT[timer.location]}` : ''} · since {timer.at}</span>
             <span style={{ fontSize: 26, fontWeight: 700 }}>{pad(Math.floor(elapsed / 3600))}:{pad(Math.floor((elapsed % 3600) / 60))}:{pad(elapsed % 60)}</span>
           </span>
           <button type="button" className="btn btn-light" onClick={stopTimer}>Stop and log</button>
@@ -100,6 +104,12 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
           <button type="button" className="btn btn-primary" onClick={startTimer}>{Icon.clock}Track time</button>
         </div>
       )}
+      {!timer ? (
+        <div className="seg" role="group" aria-label="Where are you working?" style={{ alignSelf: 'flex-start' }}>
+          <button type="button" aria-pressed={where === 'hub'} onClick={() => setWhere('hub')}>In the hub</button>
+          <button type="button" aria-pressed={where === 'remote'} onClick={() => setWhere('remote')}>Remote</button>
+        </div>
+      ) : null}
 
       {!manualOpen ? (
         <button type="button" className="btn btn-quiet btn-sm" style={{ alignSelf: 'flex-start', color: 'var(--blue)' }} onClick={() => { setManualOpen(true); setManualError(''); }}>
@@ -130,7 +140,7 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
               <input id="m-end" className="field" type="time" step={300} value={manualEnd} onChange={(e) => { setManualEnd(e.target.value); setManualError(''); }} />
             </div>
           </div>
-          <span className="tiny muted">On {projectName(projectId)}. {isAdmin ? '' : 'You can add today or yesterday. For older days, ask an admin.'}</span>
+          <span className="tiny muted">On {projectName(projectId)}, {WHERE_TEXT[where]}. {isAdmin ? '' : 'You can add today or yesterday. For older days, ask an admin.'}</span>
           {manualError ? <span role="alert" className="tiny strong" style={{ color: 'var(--bad)' }}>{manualError}</span> : null}
           <div className="inline">
             <button type="button" className="btn btn-primary btn-sm" style={{ minHeight: 40 }} onClick={addManual}>Add time</button>
@@ -157,7 +167,7 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
                       {isNew ? <span className="pill good">Just logged</span> : null}
                     </span>
                     <span className="tiny muted">
-                      {dayLabel(e.date)} · <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{e.start} – {e.end}</strong> · {e.source === 'meeting' ? 'tracked meeting' : 'work'}
+                      {dayLabel(e.date)} · <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{e.start} – {e.end}</strong> · {e.source === 'meeting' ? 'tracked meeting' : 'work'}{e.location ? ` · ${WHERE_TEXT[e.location]}` : ''}
                     </span>
                   </span>
                   <span className="inline" style={{ gap: 4, flex: 'none', flexWrap: 'nowrap' }}>
@@ -168,6 +178,20 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
                         aria-label={`Edit time for ${project}, ${e.start} to ${e.end}`}
                         onClick={() => { setEditing(e.id); setEditStart(e.start); setEditEnd(e.end); setEditError(''); }}
                       >Edit</button>
+                    ) : null}
+                    {canEdit && !isEditing ? (
+                      confirmDelete === e.id ? (
+                        <button
+                          type="button" className="btn btn-sm" style={{ background: 'var(--bad)', color: '#fff', borderColor: 'var(--bad)' }}
+                          onClick={() => { dispatch({ type: 'deleteTime', id: e.id }); flash('Time entry deleted'); setConfirmDelete(null); }}
+                          onBlur={() => setConfirmDelete(null)}
+                        >Delete?</button>
+                      ) : (
+                        <button
+                          type="button" className="btn btn-quiet btn-sm" style={{ color: 'var(--bad)' }}
+                          aria-label={`Delete time for ${project}, ${e.start} to ${e.end}`} onClick={() => setConfirmDelete(e.id)}
+                        >Delete</button>
+                      )
                     ) : null}
                     {!canEdit ? <span title="Too old to change yourself. Ask an admin." style={{ color: 'var(--faint)', width: 32, display: 'inline-flex', justifyContent: 'center' }} aria-label="Locked">{Icon.lock}</span> : null}
                   </span>

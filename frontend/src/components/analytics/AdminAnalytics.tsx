@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { MemberAnalyticsRow } from '@hub-pulse/shared';
+import { api } from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { TIER_HOURS, type AttendanceStatus, type Tier } from '@/lib/types';
 import { attendanceStats, entryMinutes, paceStatus, weekHours } from '@/lib/rules';
@@ -59,6 +61,13 @@ export function AdminAnalytics() {
   const daysLeft = 6 - weekdayOf(DEMO_TODAY);
   const inValidation = state.tasks.filter((t) => t.status === 'validation').length;
 
+  // This week's hours by where they were worked, for the members in view.
+  const inView = new Set(members.map((m) => m.id));
+  const thisWeek = state.timeEntries.filter((e) => inView.has(e.memberId) && weekOf(e.date) === CURRENT_WEEK && e.location);
+  const hubHours = thisWeek.filter((e) => e.location === 'hub').reduce((a, e) => a + entryMinutes(e), 0) / 60;
+  const remoteHours = thisWeek.filter((e) => e.location === 'remote').reduce((a, e) => a + entryMinutes(e), 0) / 60;
+  const hubShare = hubHours + remoteHours ? Math.round((hubHours / (hubHours + remoteHours)) * 100) : null;
+
   return (
     <>
       <header className="page-head">
@@ -77,7 +86,13 @@ export function AdminAnalytics() {
         <Kpi label="Hours logged" value={hoursText(logged)} note={`of ${committed} h committed`} />
         <Kpi label="Attendance, last 8 weeks" value={`${overall} %`} note="in person or remote, excused not counted" />
         <Kpi label="Tasks finished this week" value={doneThisWeek} note={`${inValidation} waiting in Validation`} />
+        <Kpi
+          label="In the hub vs remote" value={hubShare === null ? '—' : `${hubShare} % hub`}
+          note={hubShare === null ? 'no locations logged this week' : `${hoursText(hubHours)} in the hub · ${hoursText(remoteHours)} remote`}
+        />
       </section>
+
+      <WatchList tier={tier} />
 
       <div className="row">
         <section className="card" aria-labelledby="behind-h" style={{ flex: '3 1 520px', minWidth: 0 }}>
@@ -170,5 +185,63 @@ export function AdminAnalytics() {
         </div>
       </section>
     </>
+  );
+}
+
+/**
+ * Who needs a call and who deserves a thank-you, computed by the backend (GET /api/analytics/members):
+ * drifting = under half the commitment in both of the last two finished weeks and missed a meeting;
+ * superstar = on pace and took initiative this month.
+ */
+function WatchList({ tier }: { tier: Tier | 'all' }) {
+  const [rows, setRows] = useState<MemberAnalyticsRow[] | null>(null);
+  useEffect(() => {
+    api.memberAnalytics().then(setRows).catch(() => setRows([]));
+  }, []);
+  if (!rows) return null;
+  const inTier = rows.filter((r) => r.active && (tier === 'all' || r.tier === tier));
+  const drifting = inTier.filter((r) => r.drifting);
+  const stars = inTier.filter((r) => r.superstar);
+
+  return (
+    <div className="row">
+      <section className="card" aria-labelledby="drift-h" style={{ flex: '1 1 420px', minWidth: 0 }}>
+        <div className="between">
+          <h2 id="drift-h">Drifting away</h2>
+          <span className="small muted">under half the commitment two weeks running, and missed meetings</span>
+        </div>
+        {drifting.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Nobody right now.</p> : (
+          <ul className="list">
+            {drifting.map((r) => (
+              <li key={r.memberId} className="inline" style={{ gap: 12 }}>
+                <span className="stack" style={{ gap: 2, flex: '1 1 160px' }}>
+                  <span style={{ fontWeight: 600 }}>{r.name}</span>
+                  <span className="tiny muted">{r.tier} · {r.commitment} h a week</span>
+                </span>
+                <span className="small">{hoursText(r.avgHours6w)} avg / week · {r.attendance.missed} missed · {r.tasksOpen} open tasks</span>
+                <span className="pill bad">Drifting</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="card" aria-labelledby="star-h" style={{ flex: '1 1 320px', minWidth: 0 }}>
+        <div className="between">
+          <h2 id="star-h">Superstars this month</h2>
+          <span className="small muted">on pace and took initiative</span>
+        </div>
+        {stars.length === 0 ? <p className="small muted" style={{ margin: 0 }}>Nobody yet this month.</p> : (
+          <ul className="list">
+            {stars.map((r) => (
+              <li key={r.memberId} className="inline" style={{ gap: 12 }}>
+                <span style={{ fontWeight: 600, flex: '1 1 140px' }}>{r.name}</span>
+                <span className="small">{hoursText(r.weekHours)} this week · {r.tasksDoneThisWeek} done</span>
+                <span className="pill good">Superstar</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, type DragEvent } from 'react';
 import { useStore } from '@/lib/store';
 import type { Task } from '@/lib/types';
+import { shortDate } from '@/lib/time';
 import { Segmented } from '../ui';
 import { Board } from './Board';
 import { NewProjectDialog } from './NewProjectDialog';
@@ -15,7 +16,7 @@ type Scope = 'mine' | 'all';
 const ALL = 'all';
 
 export function ProjectsView() {
-  const { state, dispatch, me, isAdmin, flash } = useStore();
+  const { state, dispatch, me, isAdmin, flash, memberName } = useStore();
   const [projectId, setProjectId] = useState<string>(ALL);
   const [view, setView] = useState<View>('board');
   const [scope, setScope] = useState<Scope>('all');
@@ -103,6 +104,14 @@ export function ProjectsView() {
             {projects.length > 1 ? `${projects.length} projects · ` : `${single?.workstreams.length ?? 0} workstreams · `}
             {open.length} open · {open.filter((t) => !t.owner).length} without an owner · {inScope.filter((t) => t.status === 'idea').length} ideas
           </span>
+          {single && (single.lead || single.deadline || single.neededRoles?.length) ? (
+            <span className="inline small" style={{ gap: 8 }}>
+              {single.lead ? <span>Owner <strong>{memberName(single.lead)}</strong></span> : null}
+              {single.deadline ? <span className="pill neutral">Deadline {shortDate(single.deadline)}</span> : null}
+              {single.neededRoles?.length ? <span className="muted">Needs:</span> : null}
+              {single.neededRoles?.map((r) => <span key={r} className="pill info">{r}</span>)}
+            </span>
+          ) : null}
         </div>
         {isAdmin ? <button type="button" className="btn btn-primary" onClick={() => setDialogOpen(true)}>+ New project</button> : null}
       </div>

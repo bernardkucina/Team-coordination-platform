@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { me, requireAdmin } from '../../core/auth';
 import { forbidden } from '../../core/errors';
 import { id, parse } from '../../core/validate';
-import { fillPresent, listRecords, markSelf, meetingDetail, recordMeeting } from './service';
+import { fillPresent, listRecords, markSelf, meetingDetail, recordMeeting, reportAttendance, unmarkSelf } from './service';
 
 export const attendanceRouter = Router();
 
@@ -22,9 +22,21 @@ attendanceRouter.get('/attendance', async (req, res) => {
   res.json(await listRecords({ memberId }));
 });
 
+const reason = z.string().trim().max(500).optional();
+
 attendanceRouter.post('/meetings/:id/attendance/self', async (req, res) => {
-  const body = parse(z.object({ status: z.enum(['present', 'remote', 'excused']) }), req.body);
-  res.json(await markSelf(String(req.params.id), me(req), body.status));
+  const body = parse(z.object({ status: z.enum(['present', 'remote', 'excused']), reason }), req.body);
+  res.json(await markSelf(String(req.params.id), me(req), body.status, body.reason));
+});
+
+attendanceRouter.delete('/meetings/:id/attendance/self', async (req, res) => {
+  await unmarkSelf(String(req.params.id), me(req));
+  res.status(204).end();
+});
+
+attendanceRouter.post('/meetings/:id/attendance/report', async (req, res) => {
+  const body = parse(z.object({ status: z.enum(['present', 'remote', 'absent']), reason }), req.body);
+  res.json(await reportAttendance(String(req.params.id), me(req), body.status, body.reason));
 });
 
 const bulkSchema = z.object({

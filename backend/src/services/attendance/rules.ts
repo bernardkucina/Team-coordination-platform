@@ -19,6 +19,13 @@ export const canClockIn = (m: MeetingTimes, now: Date): boolean => meetingPhase(
 /** "Can't come" is only possible before the meeting starts. */
 export const canExcuse = (m: MeetingTimes, now: Date): boolean => now < m.startsAt;
 
+/** Days after a meeting ends during which members can still answer "did you attend?". */
+export const REPORT_DAYS = 7;
+
+/** "Did you attend?" can be answered after the meeting ended, for REPORT_DAYS days. */
+export const canReport = (m: MeetingTimes, now: Date): boolean =>
+  now >= m.endsAt && now.getTime() - m.endsAt.getTime() <= REPORT_DAYS * 86_400_000;
+
 export interface StatsMeeting extends MeetingTimes {
   id: string;
   seriesId: string;

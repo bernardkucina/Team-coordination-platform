@@ -29,6 +29,7 @@ const uniqueProjectId = async (name: string): Promise<string> => {
 /** A project in one step, with its workstreams and first tasks. */
 export const createProject = async (input: CreateProjectRequest, actor: SessionMember): Promise<Project> => {
   const names = [...new Set((input.workstreams ?? []).map((w) => w.trim()).filter(Boolean))];
+  const neededRoles = [...new Set((input.neededRoles ?? []).map((r) => r.trim()).filter(Boolean))];
   const workstreams = names.length ? names : ['General'];
   const lead = input.lead || null;
   await assertMembersExist([lead, ...(input.tasks ?? []).map((t) => t.owner)]);
@@ -38,6 +39,7 @@ export const createProject = async (input: CreateProjectRequest, actor: SessionM
     await tx.project.create({
       data: {
         id, name: input.name.trim(), description: input.description?.trim() ?? '', leadId: lead,
+        deadline: input.deadline ? toDbDate(input.deadline) : null, neededRoles,
         workstreams: {
           create: workstreams.map((name, i) => ({ name, color: WORKSTREAM_COLORS[i % WORKSTREAM_COLORS.length], leadId: lead, position: i })),
         },
@@ -50,8 +52,9 @@ export const createProject = async (input: CreateProjectRequest, actor: SessionM
           title: t.title.trim(),
           workstream: workstreams.includes(t.workstream) ? t.workstream : workstreams[0],
           ownerId: t.owner,
+          due: t.due ? toDbDate(t.due) : null,
           createdById: actor.id,
-          events: { create: { actorId: actor.id, kind: 'created', text: CREATED_WITH_PROJECT_TEXT } },
+          events: { create: { actorId: actor.id, kind: 'created', text: CREATED_WITH_PROJECT_TEXT, createdAt: now() } },
         },
       });
     }
@@ -130,7 +133,7 @@ export const createTask = async (input: CreateTaskRequest, actor: SessionMember)
       doneAt: status === 'done' ? now() : null,
       helpers: { create: helpers.map((memberId) => ({ memberId })) },
       links: { create: (input.links ?? []).map((l, position) => ({ ...l, position })) },
-      events: { create: { actorId: actor.id, kind: 'created', text: status === 'idea' ? IDEA_CREATED_TEXT : CREATED_TEXT } },
+      events: { create: { actorId: actor.id, kind: 'created', text: status === 'idea' ? IDEA_CREATED_TEXT : CREATED_TEXT, createdAt: now() } },
     },
     include: taskInclude,
   });
@@ -188,7 +191,7 @@ export const updateTask = async (id: number, patch: UpdateTaskRequest, actor: Se
       ...(doneAt !== undefined && { doneAt }),
       helpers: { deleteMany: {}, create: after.helpers.map((memberId) => ({ memberId })) },
       links: { deleteMany: {}, create: after.links.map((l, position) => ({ label: l.label, url: l.url, position })) },
-      events: { create: { actorId: actor.id, kind, text: joinParts(parts) } },
+      events: { create: { actorId: actor.id, kind, text: joinParts(parts), createdAt: now() } },
     },
     include: taskInclude,
   });
@@ -197,7 +200,7 @@ export const updateTask = async (id: number, patch: UpdateTaskRequest, actor: Se
 
 export const commentOnTask = async (id: number, text: string, actor: SessionMember): Promise<Task> => {
   await loadTask(id);
-  await db.taskEvent.create({ data: { taskId: id, actorId: actor.id, kind: 'comment', text: 'commented', comment: text.trim() } });
+  await db.taskEvent.create({ data: { taskId: id, actorId: actor.id, kind: 'comment', text: 'commented', comment: text.trim(), createdAt: now() } });
   return getTask(id);
 };
 

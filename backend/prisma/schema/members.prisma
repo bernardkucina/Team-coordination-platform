@@ -31,11 +31,13 @@ model Member {
   attendance     AttendanceRecord[]
 }
 
+/// A signed-in browser: either a member, or the super admin (who is not a member and only manages access).
 model Session {
-  id        String   @id
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id         String   @id
+  memberId   String?
+  member     Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  superAdmin Boolean  @default(false)
+  createdAt  DateTime @default(now())
   expiresAt DateTime
 
   @@index([memberId])

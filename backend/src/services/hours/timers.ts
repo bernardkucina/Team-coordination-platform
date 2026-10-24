@@ -13,7 +13,7 @@ import { markSelf, setSelfMode } from '../attendance';
 import { createEntry } from './service';
 
 const toWork = (t: ActiveTimer): WorkTimer => ({
-  memberId: t.memberId, projectId: t.projectId ?? '', at: localParts(t.startedAt).time, startedAt: t.startedAt.getTime(),
+  memberId: t.memberId, projectId: t.projectId ?? '', at: localParts(t.startedAt).time, startedAt: t.startedAt.getTime(), location: t.location,
 });
 
 const toTracking = (t: ActiveTimer): Tracking => ({
@@ -32,20 +32,22 @@ const running = (memberId: string, kind: 'work' | 'meeting') =>
 
 /** Turns a stopped timer into a time entry on the day it started (capped at midnight, at least 1 minute). */
 const entryFor = async (timer: ActiveTimer, actor: SessionMember, projectId: string, note: string, source: 'manual' | 'meeting'): Promise<TimeEntry> => {
+  // A meeting joined in person counts as time in the hub.
+  const location = source === 'meeting' ? (timer.mode === 'remote' ? 'remote' : 'hub') : (timer.location ?? undefined);
   const started = localParts(timer.startedAt);
   const stopped = localParts(now());
   const endMin = stopped.date === started.date ? Math.max(toMin(started.time) + 1, toMin(stopped.time)) : 24 * 60 - 1;
   const startMin = Math.min(toMin(started.time), endMin - 1);
   return createEntry(
-    { projectId, date: started.date, start: fromMin(startMin), end: fromMin(endMin), note },
+    { projectId, date: started.date, start: fromMin(startMin), end: fromMin(endMin), note, location },
     actor, source, timer.meetingId ?? undefined,
   );
 };
 
-export const startWork = async (actor: SessionMember, projectId: string): Promise<TimersResponse> => {
+export const startWork = async (actor: SessionMember, projectId: string, location?: 'hub' | 'remote'): Promise<TimersResponse> => {
   if (await running(actor.id, 'work')) throw conflict('A timer is already running. Stop it first.');
   if (!(await db.project.findUnique({ where: { id: projectId }, select: { id: true } }))) throw badRequest('Unknown project.');
-  await db.activeTimer.create({ data: { memberId: actor.id, kind: 'work', projectId, startedAt: now() } });
+  await db.activeTimer.create({ data: { memberId: actor.id, kind: 'work', projectId, location: location ?? null, startedAt: now() } });
   return getTimers(actor.id);
 };
 

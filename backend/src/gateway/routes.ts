@@ -8,7 +8,7 @@ import { me } from '../core/auth';
 import { localParts, now } from '../core/clock';
 import { getMember, listMembers, toMember } from '../services/members';
 import { listProjects, listTasks } from '../services/tasks';
-import { listMeetingRows, listSeries, toMeeting } from '../services/meetings';
+import { calendarStatus, listMeetingRows, listSeries, syncIfStale, toMeeting } from '../services/meetings';
 import { listRecords } from '../services/attendance';
 import { getTimers, listEntries } from '../services/hours';
 import { memberStats } from '../services/analytics';
@@ -34,6 +34,8 @@ gatewayRouter.get('/members', async (_req, res) => {
 /** Everything the frontend store needs on load, in one request. */
 gatewayRouter.get('/bootstrap', async (req, res) => {
   const user = me(req);
+  // Meetings come from the calendar: refresh our copy first when it is older than CALENDAR_SYNC_MINUTES.
+  await syncIfStale();
   const [members, projects, tasks, series, meetingRows, attendance, timeEntries, timers] = await Promise.all([
     memberProfiles(),
     listProjects(),
@@ -58,6 +60,7 @@ gatewayRouter.get('/bootstrap', async (req, res) => {
     timeEntries,
     tracking: timers.tracking,
     workTimer: timers.workTimer,
+    ...(user.isAdmin && { calendar: await calendarStatus() }),
   };
   res.json(body);
 });

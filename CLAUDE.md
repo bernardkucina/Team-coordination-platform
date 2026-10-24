@@ -56,7 +56,8 @@ Team-coordination-platform/
 │       ├── core/              # config, db, clock (Europe/Ljubljana), errors, validate (zod), auth (sessions)
 │       ├── gateway/           # composes responses across services: /api/me, /api/members, /api/bootstrap
 │       ├── services/
-│       │   ├── members/       # people, tiers, roles, sandbox login
+│       │   ├── members/       # people, tiers, sign-in (members and super admin)
+│       │   ├── access/        # super admin only: who can sign in, who is admin
 │       │   ├── tasks/         # projects, workstreams, tasks, server-written task history
 │       │   ├── meetings/      # series + meetings, ICS parser/importer (calendar is read-only)
 │       │   ├── attendance/    # clock-in, "can't come", admin bulk recording, attendance stats
@@ -77,7 +78,8 @@ Team-coordination-platform/
 - **The frontend clock follows the server.** `lib/time.ts` exports `DEMO_TODAY`, `CURRENT_WEEK`, `DEMO_NOW` and `WEEK_PACE` as live bindings set from the server's time. Read them at render time; never copy them into module-level constants.
 - **The contract is `shared/`.** Change the types in `shared/src/api.ts` or `domain.ts` first; then the backend and frontend fail to compile where they disagree. The frontend's `src/lib/types.ts` re-exports them.
 - **Auth:** every sign-in ends in the same httpOnly `hp_session` cookie backed by the `Session` table (`core/auth.ts`).
-  - **Sandbox login:** sign in with a roster email and no password (`POST /api/auth/demo-login`). It only exists when `DEMO_MODE=true`.
+  - **Sign-in:** one form, `POST /api/auth/login`. Roster members sign in with their email and no password, only while `DEMO_MODE=true`.
+  - **The super admin** is made up: it has no `Member` row and appears in no list. It signs in on the same form with `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`; without a password there is no super admin. Its session has `superAdmin = true`, so `requireAuth` answers 403 everywhere except `/api/access/*` (`services/access`). There it adds people, makes them admin or member, and switches access off and on, which also signs them out. The last active admin can't be demoted. Admins can only change tiers (`PATCH /api/members/:id`).
   - **Admin rights:** come from `Member.isAdmin`.
   - **Google sign-in:** will plug into the members service and call `startSession`.
 - **The server owns the rules.** Clients can't skip them:
@@ -85,7 +87,27 @@ Team-coordination-platform/
   - **Logging window:** members can log hours for today or yesterday, admins up to 6 days back.
   - **Clock-in:** opens 10 minutes before a meeting and stays open until it ends.
   - **"Can't come":** only before the meeting starts.
+- **Frontend dates:** `frontend/src/lib/time.ts` counts week numbers from a fixed anchor (19 Oct 2026 = week 43) and adds days by calendar date, not 24-hour steps, so 25 October (when the clocks go back) is handled correctly. Don't reintroduce `CURRENT_WEEK`-relative or millisecond date arithmetic.
 - **Time:** dates and times are Europe/Ljubljana (`core/clock.ts`). Time entries store a local date plus minutes after midnight, while meetings store UTC instants. `DEMO_NOW` moves the server clock to a fixed start moment, and the clock keeps running from there.
+
+## Deploy (Vercel)
+
+- **Live:** https://hub-pulse-orcin.vercel.app (Vercel project `hub-pulse`, team `bernard-2911`), deployed from this folder with `npx vercel deploy --prod`. `.vercelignore` keeps local `.env` files and build output out of the upload.
+- **Region:** the project's default function region is set to `fra1` (Frankfurt), next to the Supabase database in `eu-central-1`. `regions` in `vercel.json` alone was ignored; with the functions in `iad1`, every request was about 3 times slower.
+- **Supabase:** created through the Vercel Marketplace (`hub-pulse-db`). `DATABASE_URL` and `DIRECT_URL` were set from its `POSTGRES_PRISMA_URL` (plus `connection_limit=1`) and `POSTGRES_URL_NON_POOLING`.
+- **Resetting the live data:** run the seed locally with `--reset`, with both `DATABASE_URL` and `DIRECT_URL` set to the non-pooling URL.
+- **One Next.js app:** on Vercel the whole platform is the Next.js app in `frontend/`. The Express backend runs inside it as one serverless function, `frontend/src/pages/api/[...path].ts`, which calls `createApp()` from `@hub-pulse/backend/app`. The backend code is the same as when it runs standalone.
+- **Vercel project settings:** Root Directory `frontend` (with files outside it included). `frontend/vercel.json` runs `npm ci` and `npm run vercel-build` from the repo root. That script runs `prisma generate`, then `prisma migrate deploy`, then `db:seed -- --if-empty`, then `next build`.
+- **Database:** Supabase via the Vercel Marketplace.
+  - `DATABASE_URL` is the transaction pooler (port 6543) with `?pgbouncer=true&connection_limit=1`.
+  - `DIRECT_URL` is the session pooler (port 5432), used for migrations.
+  - Prisma's `binaryTargets` include `rhel-openssl-3.0.x`, and `@prisma/nextjs-monorepo-workaround-plugin` copies the engine into the function.
+- **Other variables:** `DEMO_MODE`, `COOKIE_SECURE=true`, `SUPER_ADMIN_PASSWORD`, and optionally `SUPER_ADMIN_EMAIL`.
+- **Serverless limits:**
+  - `DEMO_NOW` restarts at every cold start, so leave it empty on Vercel.
+  - The sign-in rate limit is per function instance.
+- **Local development:** `frontend/.env.development` sets `BACKEND_URL`, so `npm run dev:frontend` forwards `/api` to `npm run dev:backend`. Without it, Next.js runs the API itself; that needs the backend env variables in the shell.
+- **Docker:** the root `Dockerfile` and `railway.json` are the alternative deploy, Express serving the frontend in one container. It needs `DIRECT_URL` as well.
 
 ## Business rules
 
@@ -93,6 +115,12 @@ Team-coordination-platform/
 - **Attendance rate:** members who showed up ÷ (invited − excused). Only finished meetings count. A missing record counts as `missed` only once an admin has marked the meeting recorded.
 - **Drifting away:** under 50% of the commitment in both of the last two finished weeks, *and* at least one missed meeting in those weeks.
 - **Superstar:** not behind on pace, and this month either picked up at least 2 unowned tasks or added at least 2 ideas.
+- **My meetings (Today):** members see their next meetings from the calendar, happening now first, **never more than 3**. Admins see today's meetings (also at most 3) with the calendar sync status and a "Sync now" button.
+- **Can't come:** possible until the meeting starts, with an optional reason, and can be taken back (`DELETE /api/meetings/:id/attendance/self`).
+- **Did you attend?:** for meetings you didn't clock in to, answerable for 7 days after the meeting ends and only until an admin records you (`POST .../attendance/report`). The answers are in person, online, or not attended. Not attended needs a reason and is stored as `excused`; an admin can still change it.
+- **Hub vs remote:** every time entry and work timer records `location: 'hub' | 'remote'`. Meeting time follows how you joined (in person counts as hub). The hours sheet has no location, so the seed assigns about one day in three remote; imported rows aren't real data.
+- **Projects:** an owner (`lead`), a `deadline`, `neededRoles` (e.g. Tech, Marketing) and due dates for the first tasks.
+- **Calendar sync:** `services/meetings/sync.ts` reads `CALENDAR_ICS_URL` (Google Calendar's public iCal address), read only. It updates meetings by UID, adds series members from the `Members:` emails in event descriptions, and removes future meetings that left the calendar and have no attendance. It runs on "Sync now" and on `/api/bootstrap` when the last sync is older than `CALENDAR_SYNC_MINUTES` (default 15). Status: `GET /api/calendar/status`.
 - **Task permissions:** members can edit any task, including handing it to someone else; the history is the safeguard. Only admins create projects. Admins and the project lead can add workstreams.
 
 ## Hard constraints

@@ -4,6 +4,7 @@
  */
 export { meetingsRouter } from './routes';
 export {
-  toMeeting, listSeries, getSeries, listMeetingRows, getMeetingRow, isInvited, setRecorded, importCalendarEvents,
+  toMeeting, listSeries, getSeries, listMeetingRows, getMeetingRow, isInvited, setRecorded, importCalendarEvents, addToHubWideSeries,
 } from './service';
 export { parseIcs, seriesNameOf, memberEmailsOf, meetingIdOf, type CalendarEvent } from './ics';
+export { calendarStatus, syncCalendar, syncIfStale } from './sync';

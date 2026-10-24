@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { isoDate, parse } from '../../core/validate';
+import { requireAdmin } from '../../core/auth';
+import { calendarStatus, syncCalendar } from './sync';
 import { addDays, zonedToUtc } from '../../core/clock';
 import { listMeetingRows, listSeries, toMeeting } from './service';
 
@@ -8,6 +10,15 @@ export const meetingsRouter = Router();
 
 meetingsRouter.get('/series', async (_req, res) => {
   res.json(await listSeries());
+});
+
+meetingsRouter.get('/calendar/status', requireAdmin, async (_req, res) => {
+  res.json(await calendarStatus());
+});
+
+/** "Sync now": reads the calendar again (read only). */
+meetingsRouter.post('/calendar/sync', requireAdmin, async (_req, res) => {
+  res.json(await syncCalendar());
 });
 
 /** GET /api/meetings?from=YYYY-MM-DD&to=YYYY-MM-DD (local dates, both inclusive). */

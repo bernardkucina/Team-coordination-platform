@@ -16,6 +16,7 @@ export const toEntry = (e: DbEntry): TimeEntry => ({
   end: fromMin(e.endMin),
   note: e.note,
   source: e.source,
+  location: e.location,
 });
 
 /** Entries on local dates in [from, to], newest first. */
@@ -54,7 +55,7 @@ export const createEntry = async (input: CreateTimeEntryRequest, actor: SessionM
   const entry = await db.timeEntry.create({
     data: {
       memberId, projectId: input.projectId, date: toDbDate(input.date), startMin: toMin(input.start), endMin: toMin(input.end),
-      note: input.note?.trim() ?? '', source, meetingId,
+      note: input.note?.trim() ?? '', source, meetingId, location: input.location ?? null,
     },
   });
   return toEntry(entry);
@@ -76,7 +77,10 @@ export const updateEntry = async (id: number, patch: UpdateTimeEntryRequest, act
   if (next.projectId !== current.projectId) await assertProject(next.projectId);
   const entry = await db.timeEntry.update({
     where: { id },
-    data: { projectId: next.projectId, date: toDbDate(next.date), startMin: toMin(next.start), endMin: toMin(next.end), note: next.note.trim() },
+    data: {
+      projectId: next.projectId, date: toDbDate(next.date), startMin: toMin(next.start), endMin: toMin(next.end), note: next.note.trim(),
+      ...(patch.location && { location: patch.location }),
+    },
   });
   return toEntry(entry);
 };
@@ -100,6 +104,21 @@ export const weeklyHours = async (fromMonday: string, toDate: string): Promise<M
     totals.set(e.memberId, byWeek);
   }
   return totals;
+};
+
+/** Hours per member for local dates in [from, to], split by where they were worked. */
+export const hoursByLocation = async (from: string, to: string): Promise<Map<string, { hub: number; remote: number }>> => {
+  const entries = await db.timeEntry.findMany({
+    where: { date: { gte: toDbDate(from), lte: toDbDate(to) }, location: { not: null } },
+    select: { memberId: true, location: true, startMin: true, endMin: true },
+  });
+  const split = new Map<string, { hub: number; remote: number }>();
+  for (const e of entries) {
+    const s = split.get(e.memberId) ?? { hub: 0, remote: 0 };
+    s[e.location!] += (e.endMin - e.startMin) / 60;
+    split.set(e.memberId, s);
+  }
+  return split;
 };
 
 export const hoursSummary = async (memberId: string): Promise<HoursSummary> => {

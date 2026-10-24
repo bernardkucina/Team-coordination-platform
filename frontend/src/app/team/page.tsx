@@ -14,7 +14,7 @@ function TeamInner() {
   const { state, isAdmin } = useStore();
   const params = useSearchParams();
   const router = useRouter();
-  const tab: Tab = params.get('tab') === 'attendance' ? 'attendance' : 'people';
+  const tab: Tab = params?.get('tab') === 'attendance' ? 'attendance' : 'people';
   const needs = state.meetings.filter((m) => meetingPhase(m) === 'past' && !m.recorded).length;
 
   if (!isAdmin) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AttendanceStatus } from '@hub-pulse/shared';
-import { attendanceStats, canClockIn, canExcuse, meetingPhase, type StatsMeeting } from './rules';
+import { attendanceStats, canClockIn, canExcuse, canReport, meetingPhase, type StatsMeeting } from './rules';
 
 const meeting = (id: string, start: string, end: string, recorded = true, seriesId = 'grants'): StatsMeeting => ({
   id, seriesId, recorded, startsAt: new Date(start), endsAt: new Date(end),
@@ -19,6 +19,13 @@ describe('attendance rules', () => {
   it('allows "can\'t come" only before the start', () => {
     expect(canExcuse(m, new Date('2026-10-26T16:59:00Z'))).toBe(true);
     expect(canExcuse(m, new Date('2026-10-26T17:00:00Z'))).toBe(false);
+  });
+
+  it('asks "did you attend?" from the end of the meeting for 7 days', () => {
+    expect(canReport(m, new Date('2026-10-26T17:59:00Z'))).toBe(false);
+    expect(canReport(m, new Date('2026-10-26T18:00:00Z'))).toBe(true);
+    expect(canReport(m, new Date('2026-11-02T18:00:00Z'))).toBe(true);
+    expect(canReport(m, new Date('2026-11-02T18:01:00Z'))).toBe(false);
   });
 
   it('counts finished meetings, excused never counts against, unrecorded gaps are not counted yet', () => {

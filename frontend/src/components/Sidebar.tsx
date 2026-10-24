@@ -33,7 +33,7 @@ export function Sidebar() {
 
       <div className="nav">
         {nav.map((item) => (
-          <Link key={item.href} href={item.href} aria-current={pathname.startsWith(item.href) ? 'page' : undefined}>
+          <Link key={item.href} href={item.href} aria-current={pathname?.startsWith(item.href) ? 'page' : undefined}>
             {item.icon}
             {item.label}
           </Link>

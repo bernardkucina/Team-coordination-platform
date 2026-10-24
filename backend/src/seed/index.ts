@@ -6,8 +6,9 @@
  *   hours.xlsx             → weekly totals, spread over Monday–Friday as time entries
  * plus sample projects and tasks (sample-projects.ts).
  *
- * Usage: npm run db:seed            (empty database)
- *        npm run db:seed -- --reset (wipes everything first)
+ * Usage: npm run db:seed               (empty database)
+ *        npm run db:seed -- --reset    (wipes everything first)
+ *        npm run db:seed -- --if-empty (does nothing when there is data; used on every deploy)
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -100,6 +101,7 @@ const seedProjects = async () => {
     await db.project.create({
       data: {
         id: p.id, name: p.name, description: p.description, leadId: p.lead, createdAt: zonedToUtc(p.created, '09:00'),
+        deadline: p.deadline ? toDbDate(p.deadline) : null, neededRoles: p.neededRoles ?? [],
         workstreams: { create: p.workstreams.map((name, i) => ({ name, color: WORKSTREAM_COLORS[i % WORKSTREAM_COLORS.length], leadId: p.lead, position: i })) },
       },
     });
@@ -187,6 +189,8 @@ const seedHours = async () => {
       data.push({
         memberId, projectId: projects[(d + isoWeek(weekStart)) % projects.length], date: toDbDate(addDays(weekStart, d)),
         startMin: start, endMin: Math.min(start + chunk, 24 * 60 - 1), note: 'Imported from the hours sheet', source: 'manual' as const,
+        // The sheet has no location. Assign one so the hub/remote split has data: about one day in three remote.
+        location: (d + memberId.length + isoWeek(weekStart)) % 3 === 0 ? ('remote' as const) : ('hub' as const),
       });
       left -= chunk;
     }
@@ -198,6 +202,10 @@ const seedHours = async () => {
 const main = async () => {
   const reset = process.argv.includes('--reset');
   if ((await db.member.count()) > 0) {
+    if (process.argv.includes('--if-empty')) {
+      console.log('The database already has data; not seeding.');
+      return;
+    }
     if (!reset) {
       console.error('The database already has data. Run with --reset to wipe it and seed again.');
       process.exit(1);

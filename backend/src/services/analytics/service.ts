@@ -11,7 +11,7 @@ import { commitmentOf, getMember, listMembers, tierName, toMember, type MemberSt
 import { initiativeSince, listTasks, taskOutcomes } from '../tasks';
 import { listMeetingRows, listSeries } from '../meetings';
 import { attendanceStats, listRecords, meetingPhase, type StatsMeeting } from '../attendance';
-import { expectedShare, paceStatus, roundHours, weeklyHours } from '../hours';
+import { expectedShare, hoursByLocation, paceStatus, roundHours, weeklyHours } from '../hours';
 import { isDrifting, isSuperstar } from './rules';
 
 /** Weeks of history behind Member.pastWeeks. */
@@ -29,6 +29,8 @@ interface Context {
   records: AttendanceRecord[];
   tasks: Awaited<ReturnType<typeof taskOutcomes>>;
   initiative: Map<string, { picked: number; ideas: number }>;
+  /** This week's hours by location. */
+  where: Map<string, { hub: number; remote: number }>;
 }
 
 const loadContext = async (historyWeeks: number): Promise<Context> => {
@@ -38,7 +40,7 @@ const loadContext = async (historyWeeks: number): Promise<Context> => {
   const firstWeek = addDays(thisWeek, -7 * Math.max(PAST_WEEKS, historyWeeks));
   const monthStart = zonedToUtc(`${day.slice(0, 7)}-01`);
 
-  const [members, hours, meetingRows, series, records, tasks, initiative] = await Promise.all([
+  const [members, hours, meetingRows, series, records, tasks, initiative, where] = await Promise.all([
     listMembers({ includeInactive: true }),
     weeklyHours(firstWeek, addDays(thisWeek, 6)),
     listMeetingRows(),
@@ -46,6 +48,7 @@ const loadContext = async (historyWeeks: number): Promise<Context> => {
     listRecords(),
     taskOutcomes(),
     initiativeSince(monthStart),
+    hoursByLocation(thisWeek, addDays(thisWeek, 6)),
   ]);
 
   const byKey = new Map(records.map((r) => [`${r.meetingId}|${r.memberId}`, r.status]));
@@ -61,6 +64,7 @@ const loadContext = async (historyWeeks: number): Promise<Context> => {
     records,
     tasks,
     initiative,
+    where,
   };
 };
 
@@ -105,6 +109,8 @@ const rowFor = (ctx: Context, m: DbMember): MemberAnalyticsRow => {
     tasksOpen: owned.filter((t) => t.status !== 'done' && t.status !== 'idea').length,
     tasksDone: owned.filter((t) => t.status === 'done').length,
     tasksDoneThisWeek: owned.filter((t) => t.status === 'done' && t.doneAt && t.doneAt >= weekStartInstant).length,
+    hubHours: roundHours(ctx.where.get(m.id)?.hub ?? 0),
+    remoteHours: roundHours(ctx.where.get(m.id)?.remote ?? 0),
     drifting: m.active && isDrifting(lastTwo.map((w) => hoursIn(ctx, m.id, w)), commitment, missedRecently),
     superstar: m.active && isSuperstar(pace, initiative.picked, initiative.ideas),
   };

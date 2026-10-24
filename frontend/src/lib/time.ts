@@ -11,7 +11,9 @@ export let DEMO_NOW = '12:40';
 /** Share of the weekly commitment expected by today: working days so far (Wednesday = 3/5, weekend = 1). */
 export let WEEK_PACE = 1;
 let clockOffsetMs = 0;
-const WEEK_43_MONDAY = new Date(2026, 9, 19);
+/** A fixed reference: Monday 19 October 2026 is ISO week 43. Week numbers are counted from it. */
+const ANCHOR_MONDAY = new Date(2026, 9, 19);
+const ANCHOR_WEEK = 43;
 const DAY_MS = 86_400_000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -47,16 +49,24 @@ const fromISO = (iso: string): Date => {
   return new Date(y, m - 1, d);
 };
 
-export const addDays = (iso: string, days: number): string => toISO(new Date(fromISO(iso).getTime() + days * DAY_MS));
+/** Calendar arithmetic (not 24-hour steps), so days stay right across daylight saving changes. */
+export const addDays = (iso: string, days: number): string => {
+  const d = fromISO(iso);
+  d.setDate(d.getDate() + days);
+  return toISO(d);
+};
+
+/** Whole calendar days from the anchor Monday (rounded, so a 23- or 25-hour day still counts as one). */
+const daysFromAnchor = (iso: string): number => Math.round((fromISO(iso).getTime() - ANCHOR_MONDAY.getTime()) / DAY_MS);
 
 /** ISO date of a weekday (0 = Monday) in a given week number. */
 export const dateInWeek = (week: number, weekday: number): string =>
-  toISO(new Date(WEEK_43_MONDAY.getTime() + ((week - CURRENT_WEEK) * 7 + weekday) * DAY_MS));
+  addDays(toISO(ANCHOR_MONDAY), (week - ANCHOR_WEEK) * 7 + weekday);
 
 export const fridayOf = (week: number): string => dateInWeek(week, 4);
 
-export const weekOf = (iso: string): number =>
-  CURRENT_WEEK + Math.floor((fromISO(iso).getTime() - WEEK_43_MONDAY.getTime()) / (7 * DAY_MS));
+/** ISO week number within 2026 (the frontend's "W43"). */
+export const weekOf = (iso: string): number => ANCHOR_WEEK + Math.floor(daysFromAnchor(iso) / 7);
 
 /** 0 = Monday. */
 export const weekdayOf = (iso: string): number => (fromISO(iso).getDay() + 6) % 7;

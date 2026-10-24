@@ -20,6 +20,16 @@ model SeriesMember {
   @@id([seriesId, memberId])
 }
 
+/// The last calendar sync (one row, id "calendar").
+model CalendarSync {
+  id         String    @id
+  syncedAt   DateTime?
+  /// e.g. "55 meetings, 6 series"
+  result     String?
+  error      String?
+  updatedAt  DateTime  @updatedAt
+}
+
 model Meeting {
   /// The calendar event UID without its domain, e.g. "community-20260914".
   id       String        @id

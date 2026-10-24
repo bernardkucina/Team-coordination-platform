@@ -13,6 +13,8 @@ export interface SampleProject {
   /** Meeting series whose meeting time is logged on this project. */
   series: string[];
   created: string;
+  deadline?: string;
+  neededRoles?: string[];
 }
 
 export interface SampleTask {
@@ -38,18 +40,22 @@ export const SAMPLE_PROJECTS: SampleProject[] = [
   {
     id: 'ops', name: 'Hub Operations', description: 'Running the institute: community, finance and communication.',
     lead: 'ana-kovac', workstreams: ['Community', 'Finance', 'Comms'], series: ['shapers-tech', 'shapers-voice'], created: '2026-09-01',
+    neededRoles: ['Community', 'Finance', 'Marketing'],
   },
   {
     id: 'summer-school-2027', name: 'Summer School 2027', description: 'Programme, speakers, venue and participants for next summer.',
     lead: 'luka-novak', workstreams: ['Programme', 'Speakers', 'Logistics', 'Participants'], series: ['summer-school'], created: '2026-09-14',
+    deadline: '2027-06-30', neededRoles: ['Programme', 'Logistics', 'Marketing', 'Tech'],
   },
   {
     id: 'grant-applications', name: 'Grant applications', description: 'Erasmus+ and municipal grants for 2027.',
     lead: 'maja-horvat', workstreams: ['Research', 'Writing', 'Budget'], series: ['grants'], created: '2026-09-14',
+    deadline: '2026-11-20', neededRoles: ['Writing', 'Finance'],
   },
   {
     id: 'shape-talks-season', name: 'Shape Talks season', description: 'Monthly public talks, autumn and winter season.',
     lead: 'luka-novak', workstreams: ['Speakers', 'Venue & Production', 'Promotion'], series: ['shape-talks'], created: '2026-09-15',
+    deadline: '2027-03-31', neededRoles: ['Speakers', 'Tech', 'Marketing'],
   },
 ];
 

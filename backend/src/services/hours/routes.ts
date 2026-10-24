@@ -25,8 +25,11 @@ hoursRouter.get('/time-entries', async (req, res) => {
   res.json(await listEntries({ memberId, from: q.from, to: q.to }));
 });
 
+const location = z.enum(['hub', 'remote']);
+
 const createSchema = z.object({
   projectId: id,
+  location: location.optional(),
   date: isoDate,
   start: clockTime,
   end: clockTime,
@@ -39,7 +42,7 @@ hoursRouter.post('/time-entries', async (req, res) => {
 });
 
 const updateSchema = z
-  .object({ projectId: id, date: isoDate, start: clockTime, end: clockTime, note: z.string().max(500) })
+  .object({ projectId: id, date: isoDate, start: clockTime, end: clockTime, note: z.string().max(500), location })
   .partial()
   .strict();
 
@@ -70,8 +73,8 @@ hoursRouter.get('/timers', async (req, res) => {
 });
 
 hoursRouter.post('/timers/work/start', async (req, res) => {
-  const { projectId } = parse(z.object({ projectId: id }), req.body);
-  res.json(await startWork(me(req), projectId));
+  const { projectId, location: where } = parse(z.object({ projectId: id, location: location.optional() }), req.body);
+  res.json(await startWork(me(req), projectId, where));
 });
 
 hoursRouter.post('/timers/work/stop', async (req, res) => {

@@ -5,6 +5,12 @@ enum TimeSource {
   meeting
 }
 
+/// Where the work happened: in the hub (Impact Hub) or remotely.
+enum WorkLocation {
+  hub
+  remote
+}
+
 model TimeEntry {
   id        Int        @id @default(autoincrement())
   memberId  String
@@ -18,6 +24,8 @@ model TimeEntry {
   endMin    Int
   note      String     @default("")
   source    TimeSource @default(manual)
+  /// null for imported hours that did not record it.
+  location  WorkLocation?
   meetingId String?
   createdAt DateTime   @default(now())
 
@@ -46,6 +54,8 @@ model ActiveTimer {
   meetingId String?
   meeting   Meeting?      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   mode      TrackingMode?
+  /// Where a work timer is running (meeting timers follow their mode).
+  location  WorkLocation?
   startedAt DateTime
 
   @@unique([memberId, kind])

@@ -1,10 +1,15 @@
 // One database for the whole monolith. Each service keeps its models in its own file in this folder.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" for local machines and Docker; rhel-openssl-3.0.x for Vercel's serverless functions.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // The app's connection. On Supabase: the transaction pooler (port 6543) with ?pgbouncer=true&connection_limit=1.
+  url       = env("DATABASE_URL")
+  // Migrations need a direct connection. On Supabase: the session pooler (port 5432). Locally: same as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }

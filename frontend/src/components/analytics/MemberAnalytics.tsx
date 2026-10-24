@@ -17,7 +17,6 @@ const periodStart = (period: Period): string =>
 export function MemberAnalytics() {
   const { state, me } = useStore();
   const [period, setPeriod] = useState<Period>('8w');
-  const [excuseSent, setExcuseSent] = useState<string[]>([]);
 
   const commitment = TIER_HOURS[me.tier];
   const weeks = [...me.pastWeeks, weekHours(state.timeEntries, me.id)];
@@ -35,6 +34,14 @@ export function MemberAnalytics() {
   const firstDate = myEntries.reduce((min, e) => (e.date < min ? e.date : min), DEMO_TODAY);
   const periodLabel = `since ${shortDate(period === 'all' ? firstDate : periodStart(period))}`;
   const pct = (h: number) => (total ? Math.round((h / total) * 100) : 0);
+
+  // Tasks I finished in the period, and where my hours were worked (entries without a location are left out).
+  const from = periodStart(period);
+  const finished = state.tasks.filter((t) => t.owner === me.id && t.status === 'done' && !!t.doneAt && t.doneAt.slice(0, 10) >= from).length;
+  const located = myEntries.filter((e) => e.date >= from && e.location);
+  const hubHours = located.filter((e) => e.location === 'hub').reduce((a, e) => a + entryMinutes(e), 0) / 60;
+  const remoteHours = located.filter((e) => e.location === 'remote').reduce((a, e) => a + entryMinutes(e), 0) / 60;
+  const hubShare = hubHours + remoteHours ? Math.round((hubHours / (hubHours + remoteHours)) * 100) : null;
 
   // Projects I logged time on or own tasks in.
   const myProjects = state.projects
@@ -74,10 +81,14 @@ export function MemberAnalytics() {
       </header>
 
       <section className="kpis" aria-label="Summary">
-        <Kpi label="Hours logged" value={hoursText(total)} note={periodLabel} />
-        <Kpi label="Most time on" value={<span style={{ fontSize: 22 }}>{top[0]}</span>} note={`${hoursText(top[1])} · ${pct(top[1])} % of your time`} />
+        <Kpi label="Hours logged" value={hoursText(total)} note={`${periodLabel} · most on ${top[0]}`} />
+        <Kpi label="Tasks finished" value={finished} note={periodLabel} />
+        <Kpi label="Meeting attendance" value={stats.rate === null ? '—' : `${stats.rate} %`} note={`${stats.present} in person · ${stats.remote} online`} />
+        <Kpi
+          label="In the hub vs remote" value={hubShare === null ? '—' : `${hubShare} % hub`}
+          note={hubShare === null ? 'no locations logged yet' : `${hoursText(hubHours)} in the hub · ${hoursText(remoteHours)} remote`}
+        />
         <Kpi label="Weeks at commitment" value={`${metWeeks} of ${me.pastWeeks.length}`} note={`full weeks · ${commitment} h each`} />
-        <Kpi label="Meeting attendance" value={stats.rate === null ? '—' : `${stats.rate} %`} note="in person or remote" />
       </section>
 
       <section className="card" aria-labelledby="wk-h">
@@ -140,15 +151,12 @@ export function MemberAnalytics() {
             {myMeetings.map(({ m, rec }) => {
               const status = rec?.status ?? 'missed';
               const look = STATUS_LOOK[status];
-              const sent = excuseSent.includes(m.id);
               return (
                 <li key={m.id} className="inline" style={{ gap: '10px 12px' }}>
                   <span className="small muted" style={{ width: 96, fontWeight: 600 }}>{dayLabel(m.date)}</span>
                   <span style={{ flex: '1 1 180px', fontWeight: 600, fontSize: 14 }}>{state.series.find((s) => s.id === m.seriesId)?.name}</span>
-                  <span className={`pill ${sent ? 'neutral' : look.cls}`}>{sent ? 'Reason sent to admin' : status === 'missed' ? 'Missed · not excused' : status === 'excused' ? 'Missed · excused' : look.label}</span>
-                  {status === 'missed' && !sent ? (
-                    <button type="button" className="btn btn-quiet btn-sm" style={{ color: 'var(--blue)' }} onClick={() => setExcuseSent([...excuseSent, m.id])}>Add a reason</button>
-                  ) : null}
+                  <span className={`pill ${look.cls}`}>{status === 'missed' ? 'Missed · not excused' : status === 'excused' ? 'Missed · excused' : look.label}</span>
+                  {rec?.reason ? <span className="tiny muted">&ldquo;{rec.reason}&rdquo;</span> : null}
                 </li>
               );
             })}

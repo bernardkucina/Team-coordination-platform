@@ -83,10 +83,17 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
-  /** Member id of the project lead. */
+  /** Member id of the project lead (owner). */
   lead?: string;
   workstreams: Workstream[];
+  /** ISO date the project should be finished by. */
+  deadline?: string | null;
+  /** The kinds of people the project needs, e.g. "Tech", "Marketing". */
+  neededRoles?: string[];
 }
+
+/** Where work happened: in the hub (Impact Hub) or remotely. */
+export type WorkLocation = 'hub' | 'remote';
 
 /** A running "Track time" stopwatch for regular work (not a meeting). */
 export interface WorkTimer {
@@ -96,6 +103,7 @@ export interface WorkTimer {
   at: string;
   /** Epoch ms, for the live clock. */
   startedAt: number;
+  location?: WorkLocation | null;
 }
 
 export interface TimeEntry {
@@ -110,6 +118,8 @@ export interface TimeEntry {
   end: string;
   note: string;
   source: 'manual' | 'meeting';
+  /** null for imported hours that did not record it. */
+  location?: WorkLocation | null;
 }
 
 export type AttendanceStatus = 'present' | 'remote' | 'excused' | 'missed';
@@ -139,6 +149,8 @@ export interface AttendanceRecord {
   source: 'self' | 'admin';
   /** HH:MM clock-in time for self clock-ins. */
   at?: string;
+  /** Why the member could not come. */
+  reason?: string;
 }
 
 export interface Tracking {

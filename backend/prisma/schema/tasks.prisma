@@ -6,6 +6,9 @@ model Project {
   description String   @default("")
   leadId      String?
   lead        Member?  @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
+  deadline    DateTime? @db.Date
+  /// The kinds of people the project needs, e.g. "Tech", "Marketing".
+  neededRoles String[] @default([])
   createdAt   DateTime @default(now())
 
   workstreams Workstream[]

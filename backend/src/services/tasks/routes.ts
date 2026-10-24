@@ -25,8 +25,10 @@ const createProjectSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().max(2000).optional(),
   lead: id.optional(),
+  deadline: isoDate.nullable().optional(),
+  neededRoles: z.array(z.string().max(60)).max(20).optional(),
   workstreams: z.array(z.string().max(80)).max(30).optional(),
-  tasks: z.array(z.object({ title, workstream: z.string(), owner: id.nullable() })).max(100).optional(),
+  tasks: z.array(z.object({ title, workstream: z.string(), owner: id.nullable(), due: isoDate.nullable().optional() })).max(100).optional(),
 });
 
 tasksRouter.post('/projects', requireAdmin, async (req, res) => {

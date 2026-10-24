@@ -1,12 +1,14 @@
 /**
  * The monolith: one Express app and one process. Every service is mounted under /api; services stay in
- * their own folders and talk to each other only through each other's index.ts.
+ * their own folders and talk to each other only through each other's index.ts. In production the same
+ * process also serves the built frontend (see server.ts).
  */
-import express, { Router } from 'express';
+import express, { Router, type RequestHandler } from 'express';
 import cookieParser from 'cookie-parser';
 import { errorHandler, notFound } from './core/errors';
 import { loadSession, requireAuth } from './core/auth';
 import { membersRouter } from './services/members';
+import { accessRouter } from './services/access';
 import { tasksRouter } from './services/tasks';
 import { meetingsRouter } from './services/meetings';
 import { attendanceRouter } from './services/attendance';
@@ -14,20 +16,23 @@ import { hoursRouter } from './services/hours';
 import { analyticsRouter } from './services/analytics';
 import { gatewayRouter } from './gateway/routes';
 
-export const createApp = () => {
+/** @param frontend Handles every non-API request (the Next.js app) when the frontend is served from here. */
+export const createApp = (frontend?: RequestHandler) => {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '1mb' }));
-  app.use(cookieParser());
 
   app.get('/health', (_req, res) => {
     res.json({ ok: true });
   });
 
   const api = Router();
+  api.use(express.json({ limit: '1mb' }));
+  api.use(cookieParser());
   api.use(loadSession);
-  // Sign-in routes are public; everything mounted after requireAuth needs a session.
+  // Sign-in and the super admin's access routes check their own permissions.
   api.use(membersRouter);
+  api.use(accessRouter);
+  // Everything after this needs a signed-in member.
   api.use(requireAuth);
   api.use(gatewayRouter);
   api.use(tasksRouter);
@@ -39,7 +44,7 @@ export const createApp = () => {
     throw notFound('Route');
   });
 
-  app.use('/api', api);
-  app.use(errorHandler);
+  app.use('/api', api, errorHandler);
+  if (frontend) app.use(frontend);
   return app;
 };
