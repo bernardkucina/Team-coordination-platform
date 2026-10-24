@@ -1,0 +1,2187 @@
+{
+ "members": [
+  {
+   "id": "ana.kovac",
+   "name": "Ana Kovač",
+   "email": "ana.kovac@sandbox.example",
+   "initials": "AK",
+   "tier": "Shapers Core",
+   "isAdmin": true,
+   "series": [
+    "community",
+    "grants",
+    "shapers-tech",
+    "shapers-voice"
+   ],
+   "pastWeeks": [
+    70.0,
+    73.0,
+    73.0,
+    73.0,
+    71.0
+   ],
+   "currentWeek": 49.5
+  },
+  {
+   "id": "luka.novak",
+   "name": "Luka Novak",
+   "email": "luka.novak@sandbox.example",
+   "initials": "LN",
+   "tier": "Shapers Core",
+   "isAdmin": true,
+   "series": [
+    "community",
+    "summer-school",
+    "shapers-tech",
+    "shape-talks"
+   ],
+   "pastWeeks": [
+    86.5,
+    66.5,
+    49.5,
+    83.5,
+    75.0
+   ],
+   "currentWeek": 61.0
+  },
+  {
+   "id": "maja.horvat",
+   "name": "Maja Horvat",
+   "email": "maja.horvat@sandbox.example",
+   "initials": "MH",
+   "tier": "Shapers Core",
+   "isAdmin": true,
+   "series": [
+    "community",
+    "summer-school",
+    "grants",
+    "shapers-tech"
+   ],
+   "pastWeeks": [
+    67.5,
+    57.0,
+    73.0,
+    47.0,
+    20.5
+   ],
+   "currentWeek": 28.0
+  },
+  {
+   "id": "ziga.krajnc",
+   "name": "Žiga Krajnc",
+   "email": "ziga.krajnc@sandbox.example",
+   "initials": "ŽK",
+   "tier": "Shapers Impact",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "summer-school",
+    "shapers-voice"
+   ],
+   "pastWeeks": [
+    6.0,
+    10.5,
+    10.0,
+    11.5,
+    8.5
+   ],
+   "currentWeek": 6.5
+  },
+  {
+   "id": "nina.zupan",
+   "name": "Nina Zupan",
+   "email": "nina.zupan@sandbox.example",
+   "initials": "NZ",
+   "tier": "Shapers Impact",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shapers-tech",
+    "shapers-voice"
+   ],
+   "pastWeeks": [
+    8.0,
+    9.0,
+    9.5,
+    7.5,
+    9.0
+   ],
+   "currentWeek": 8.5
+  },
+  {
+   "id": "jan.potocnik",
+   "name": "Jan Potočnik",
+   "email": "jan.potocnik@sandbox.example",
+   "initials": "JP",
+   "tier": "Shapers Impact",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "grants",
+    "shape-talks"
+   ],
+   "pastWeeks": [
+    13.0,
+    14.0,
+    6.5,
+    12.5,
+    11.5
+   ],
+   "currentWeek": 7.0
+  },
+  {
+   "id": "eva.vidmar",
+   "name": "Eva Vidmar",
+   "email": "eva.vidmar@sandbox.example",
+   "initials": "EV",
+   "tier": "Shapers Impact",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "grants",
+    "shape-talks"
+   ],
+   "pastWeeks": [
+    8.0,
+    11.0,
+    13.0,
+    11.0,
+    9.5
+   ],
+   "currentWeek": 4.5
+  },
+  {
+   "id": "matic.kos",
+   "name": "Matic Kos",
+   "email": "matic.kos@sandbox.example",
+   "initials": "MK",
+   "tier": "Shapers Impact",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shape-talks",
+    "shapers-voice"
+   ],
+   "pastWeeks": [
+    0.5,
+    4.0,
+    5.5,
+    2.0,
+    2.0
+   ],
+   "currentWeek": 0.5
+  },
+  {
+   "id": "sara.mlakar",
+   "name": "Sara Mlakar",
+   "email": "sara.mlakar@sandbox.example",
+   "initials": "SM",
+   "tier": "Shapers Impact",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shapers-tech",
+    "shapers-voice"
+   ],
+   "pastWeeks": [
+    7.5,
+    11.0,
+    16.0,
+    10.0,
+    11.0
+   ],
+   "currentWeek": 6.0
+  },
+  {
+   "id": "rok.golob",
+   "name": "Rok Golob",
+   "email": "rok.golob@sandbox.example",
+   "initials": "RG",
+   "tier": "Shapers Impact",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shapers-tech",
+    "shapers-voice"
+   ],
+   "pastWeeks": [
+    13.0,
+    11.0,
+    11.0,
+    12.0,
+    10.0
+   ],
+   "currentWeek": 8.5
+  },
+  {
+   "id": "zala.turk",
+   "name": "Zala Turk",
+   "email": "zala.turk@sandbox.example",
+   "initials": "ZT",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shapers-tech"
+   ],
+   "pastWeeks": [
+    4.0,
+    3.5,
+    2.0,
+    4.5,
+    4.5
+   ],
+   "currentWeek": 2.0
+  },
+  {
+   "id": "nejc.kralj",
+   "name": "Nejc Kralj",
+   "email": "nejc.kralj@sandbox.example",
+   "initials": "NK",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shapers-tech"
+   ],
+   "pastWeeks": [
+    2.0,
+    4.5,
+    6.0,
+    4.0,
+    4.5
+   ],
+   "currentWeek": 4.0
+  },
+  {
+   "id": "tjasa.bozic",
+   "name": "Tjaša Božič",
+   "email": "tjasa.bozic@sandbox.example",
+   "initials": "TB",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "summer-school"
+   ],
+   "pastWeeks": [
+    5.0,
+    3.5,
+    2.5,
+    1.5,
+    2.0
+   ],
+   "currentWeek": 1.5
+  },
+  {
+   "id": "aljaz.hribar",
+   "name": "Aljaž Hribar",
+   "email": "aljaz.hribar@sandbox.example",
+   "initials": "AH",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "summer-school"
+   ],
+   "pastWeeks": [
+    5.5,
+    3.5,
+    4.5,
+    4.5,
+    4.0
+   ],
+   "currentWeek": 2.5
+  },
+  {
+   "id": "petra.jerman",
+   "name": "Petra Jerman",
+   "email": "petra.jerman@sandbox.example",
+   "initials": "PJ",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shape-talks"
+   ],
+   "pastWeeks": [
+    6.0,
+    5.0,
+    6.0,
+    5.0,
+    7.0
+   ],
+   "currentWeek": 3.5
+  },
+  {
+   "id": "blaz.bizjak",
+   "name": "Blaž Bizjak",
+   "email": "blaz.bizjak@sandbox.example",
+   "initials": "BB",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "summer-school"
+   ],
+   "pastWeeks": [
+    3.5,
+    4.0,
+    4.5,
+    7.0,
+    4.5
+   ],
+   "currentWeek": 2.0
+  },
+  {
+   "id": "katja.lesjak",
+   "name": "Katja Lesjak",
+   "email": "katja.lesjak@sandbox.example",
+   "initials": "KL",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "grants"
+   ],
+   "pastWeeks": [
+    2.5,
+    4.5,
+    5.0,
+    3.5,
+    3.0
+   ],
+   "currentWeek": 2.0
+  },
+  {
+   "id": "urban.petek",
+   "name": "Urban Petek",
+   "email": "urban.petek@sandbox.example",
+   "initials": "UP",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shapers-tech"
+   ],
+   "pastWeeks": [
+    1.5,
+    0.5,
+    0.0,
+    1.5,
+    1.5
+   ],
+   "currentWeek": 0.5
+  },
+  {
+   "id": "neza.oblak",
+   "name": "Neža Oblak",
+   "email": "neza.oblak@sandbox.example",
+   "initials": "NO",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "shapers-voice"
+   ],
+   "pastWeeks": [
+    3.5,
+    4.0,
+    2.5,
+    4.0,
+    4.0
+   ],
+   "currentWeek": 1.5
+  },
+  {
+   "id": "filip.rozman",
+   "name": "Filip Rozman",
+   "email": "filip.rozman@sandbox.example",
+   "initials": "FR",
+   "tier": "ShapersGO",
+   "isAdmin": false,
+   "series": [
+    "community",
+    "grants"
+   ],
+   "pastWeeks": [
+    3.5,
+    5.5,
+    5.0,
+    5.0,
+    3.0
+   ],
+   "currentWeek": 2.0
+  }
+ ],
+ "series": [
+  {
+   "id": "community",
+   "name": "Community",
+   "invited": [
+    "ana.kovac",
+    "luka.novak",
+    "maja.horvat",
+    "ziga.krajnc",
+    "nina.zupan",
+    "jan.potocnik",
+    "eva.vidmar",
+    "matic.kos",
+    "sara.mlakar",
+    "rok.golob",
+    "zala.turk",
+    "nejc.kralj",
+    "tjasa.bozic",
+    "aljaz.hribar",
+    "petra.jerman",
+    "blaz.bizjak",
+    "katja.lesjak",
+    "urban.petek",
+    "neza.oblak",
+    "filip.rozman"
+   ]
+  },
+  {
+   "id": "grants",
+   "name": "Grants",
+   "invited": [
+    "ana.kovac",
+    "maja.horvat",
+    "jan.potocnik",
+    "eva.vidmar",
+    "katja.lesjak",
+    "filip.rozman"
+   ]
+  },
+  {
+   "id": "shapers-tech",
+   "name": "Shapers Tech",
+   "invited": [
+    "ana.kovac",
+    "luka.novak",
+    "maja.horvat",
+    "nina.zupan",
+    "sara.mlakar",
+    "rok.golob",
+    "zala.turk",
+    "nejc.kralj",
+    "urban.petek"
+   ]
+  },
+  {
+   "id": "shapers-voice",
+   "name": "Shapers Voice",
+   "invited": [
+    "ana.kovac",
+    "ziga.krajnc",
+    "nina.zupan",
+    "matic.kos",
+    "sara.mlakar",
+    "rok.golob",
+    "neza.oblak"
+   ]
+  },
+  {
+   "id": "summer-school",
+   "name": "Summer School",
+   "invited": [
+    "luka.novak",
+    "maja.horvat",
+    "ziga.krajnc",
+    "tjasa.bozic",
+    "aljaz.hribar",
+    "blaz.bizjak"
+   ]
+  },
+  {
+   "id": "shape-talks",
+   "name": "Shape Talks",
+   "invited": [
+    "luka.novak",
+    "jan.potocnik",
+    "eva.vidmar",
+    "matic.kos",
+    "petra.jerman"
+   ]
+  }
+ ],
+ "meetings": [
+  {
+   "id": "community-20260914",
+   "seriesId": "community",
+   "date": "2026-09-14",
+   "start": "18:00",
+   "end": "19:30"
+  },
+  {
+   "id": "summer-school-20260915",
+   "seriesId": "summer-school",
+   "date": "2026-09-15",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20260916",
+   "seriesId": "grants",
+   "date": "2026-09-16",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20260916",
+   "seriesId": "shapers-tech",
+   "date": "2026-09-16",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20260917",
+   "seriesId": "shape-talks",
+   "date": "2026-09-17",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20260917",
+   "seriesId": "shapers-voice",
+   "date": "2026-09-17",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "summer-school-20260922",
+   "seriesId": "summer-school",
+   "date": "2026-09-22",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20260923",
+   "seriesId": "grants",
+   "date": "2026-09-23",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20260923",
+   "seriesId": "shapers-tech",
+   "date": "2026-09-23",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20260924",
+   "seriesId": "shape-talks",
+   "date": "2026-09-24",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20260924",
+   "seriesId": "shapers-voice",
+   "date": "2026-09-24",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "community-20260928",
+   "seriesId": "community",
+   "date": "2026-09-28",
+   "start": "18:00",
+   "end": "19:30"
+  },
+  {
+   "id": "summer-school-20260929",
+   "seriesId": "summer-school",
+   "date": "2026-09-29",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20260930",
+   "seriesId": "grants",
+   "date": "2026-09-30",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20260930",
+   "seriesId": "shapers-tech",
+   "date": "2026-09-30",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20261001",
+   "seriesId": "shape-talks",
+   "date": "2026-10-01",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20261001",
+   "seriesId": "shapers-voice",
+   "date": "2026-10-01",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "summer-school-20261006",
+   "seriesId": "summer-school",
+   "date": "2026-10-06",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20261007",
+   "seriesId": "grants",
+   "date": "2026-10-07",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20261007",
+   "seriesId": "shapers-tech",
+   "date": "2026-10-07",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20261008",
+   "seriesId": "shape-talks",
+   "date": "2026-10-08",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20261008",
+   "seriesId": "shapers-voice",
+   "date": "2026-10-08",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "community-20261012",
+   "seriesId": "community",
+   "date": "2026-10-12",
+   "start": "18:00",
+   "end": "19:30"
+  },
+  {
+   "id": "summer-school-20261013",
+   "seriesId": "summer-school",
+   "date": "2026-10-13",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20261014",
+   "seriesId": "grants",
+   "date": "2026-10-14",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20261014",
+   "seriesId": "shapers-tech",
+   "date": "2026-10-14",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20261015",
+   "seriesId": "shape-talks",
+   "date": "2026-10-15",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20261015",
+   "seriesId": "shapers-voice",
+   "date": "2026-10-15",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "summer-school-20261020",
+   "seriesId": "summer-school",
+   "date": "2026-10-20",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20261021",
+   "seriesId": "grants",
+   "date": "2026-10-21",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20261021",
+   "seriesId": "shapers-tech",
+   "date": "2026-10-21",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20261022",
+   "seriesId": "shape-talks",
+   "date": "2026-10-22",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20261022",
+   "seriesId": "shapers-voice",
+   "date": "2026-10-22",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "community-20261026",
+   "seriesId": "community",
+   "date": "2026-10-26",
+   "start": "18:00",
+   "end": "19:30"
+  },
+  {
+   "id": "summer-school-20261027",
+   "seriesId": "summer-school",
+   "date": "2026-10-27",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20261028",
+   "seriesId": "grants",
+   "date": "2026-10-28",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20261028",
+   "seriesId": "shapers-tech",
+   "date": "2026-10-28",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20261029",
+   "seriesId": "shape-talks",
+   "date": "2026-10-29",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20261029",
+   "seriesId": "shapers-voice",
+   "date": "2026-10-29",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "summer-school-20261103",
+   "seriesId": "summer-school",
+   "date": "2026-11-03",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20261104",
+   "seriesId": "grants",
+   "date": "2026-11-04",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20261104",
+   "seriesId": "shapers-tech",
+   "date": "2026-11-04",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20261105",
+   "seriesId": "shape-talks",
+   "date": "2026-11-05",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20261105",
+   "seriesId": "shapers-voice",
+   "date": "2026-11-05",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "community-20261109",
+   "seriesId": "community",
+   "date": "2026-11-09",
+   "start": "18:00",
+   "end": "19:30"
+  },
+  {
+   "id": "summer-school-20261110",
+   "seriesId": "summer-school",
+   "date": "2026-11-10",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20261111",
+   "seriesId": "grants",
+   "date": "2026-11-11",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20261111",
+   "seriesId": "shapers-tech",
+   "date": "2026-11-11",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20261112",
+   "seriesId": "shape-talks",
+   "date": "2026-11-12",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20261112",
+   "seriesId": "shapers-voice",
+   "date": "2026-11-12",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "summer-school-20261117",
+   "seriesId": "summer-school",
+   "date": "2026-11-17",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "grants-20261118",
+   "seriesId": "grants",
+   "date": "2026-11-18",
+   "start": "17:30",
+   "end": "18:30"
+  },
+  {
+   "id": "shapers-tech-20261118",
+   "seriesId": "shapers-tech",
+   "date": "2026-11-18",
+   "start": "19:00",
+   "end": "20:00"
+  },
+  {
+   "id": "shape-talks-20261119",
+   "seriesId": "shape-talks",
+   "date": "2026-11-19",
+   "start": "18:00",
+   "end": "19:00"
+  },
+  {
+   "id": "shapers-voice-20261119",
+   "seriesId": "shapers-voice",
+   "date": "2026-11-19",
+   "start": "19:00",
+   "end": "20:00"
+  }
+ ],
+ "attendance": [
+  {
+   "meetingId": "community-20260914",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "jan.potocnik",
+   "status": "excused"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "matic.kos",
+   "status": "missed"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "zala.turk",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "nejc.kralj",
+   "status": "remote"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "tjasa.bozic",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "aljaz.hribar",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "blaz.bizjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "katja.lesjak",
+   "status": "excused"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "urban.petek",
+   "status": "excused"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "neza.oblak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260914",
+   "memberId": "filip.rozman",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "maja.horvat",
+   "status": "excused"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "ziga.krajnc",
+   "status": "excused"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "matic.kos",
+   "status": "excused"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "zala.turk",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "nejc.kralj",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "tjasa.bozic",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "aljaz.hribar",
+   "status": "remote"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "blaz.bizjak",
+   "status": "remote"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "katja.lesjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "urban.petek",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "neza.oblak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20260928",
+   "memberId": "filip.rozman",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "nina.zupan",
+   "status": "excused"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "matic.kos",
+   "status": "missed"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "sara.mlakar",
+   "status": "excused"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "zala.turk",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "nejc.kralj",
+   "status": "remote"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "tjasa.bozic",
+   "status": "remote"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "aljaz.hribar",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "blaz.bizjak",
+   "status": "remote"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "katja.lesjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "urban.petek",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "neza.oblak",
+   "status": "present"
+  },
+  {
+   "meetingId": "community-20261012",
+   "memberId": "filip.rozman",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260915",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260915",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260915",
+   "memberId": "ziga.krajnc",
+   "status": "excused"
+  },
+  {
+   "meetingId": "summer-school-20260915",
+   "memberId": "tjasa.bozic",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260915",
+   "memberId": "aljaz.hribar",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260915",
+   "memberId": "blaz.bizjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260922",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260922",
+   "memberId": "maja.horvat",
+   "status": "remote"
+  },
+  {
+   "meetingId": "summer-school-20260922",
+   "memberId": "ziga.krajnc",
+   "status": "remote"
+  },
+  {
+   "meetingId": "summer-school-20260922",
+   "memberId": "tjasa.bozic",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260922",
+   "memberId": "aljaz.hribar",
+   "status": "remote"
+  },
+  {
+   "meetingId": "summer-school-20260922",
+   "memberId": "blaz.bizjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260929",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260929",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260929",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260929",
+   "memberId": "tjasa.bozic",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20260929",
+   "memberId": "aljaz.hribar",
+   "status": "excused"
+  },
+  {
+   "meetingId": "summer-school-20260929",
+   "memberId": "blaz.bizjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261006",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261006",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261006",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261006",
+   "memberId": "tjasa.bozic",
+   "status": "excused"
+  },
+  {
+   "meetingId": "summer-school-20261006",
+   "memberId": "aljaz.hribar",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261006",
+   "memberId": "blaz.bizjak",
+   "status": "excused"
+  },
+  {
+   "meetingId": "summer-school-20261013",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261013",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261013",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261013",
+   "memberId": "tjasa.bozic",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261013",
+   "memberId": "aljaz.hribar",
+   "status": "remote"
+  },
+  {
+   "meetingId": "summer-school-20261013",
+   "memberId": "blaz.bizjak",
+   "status": "missed"
+  },
+  {
+   "meetingId": "summer-school-20261020",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261020",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261020",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "summer-school-20261020",
+   "memberId": "tjasa.bozic",
+   "status": "missed"
+  },
+  {
+   "meetingId": "summer-school-20261020",
+   "memberId": "aljaz.hribar",
+   "status": "excused"
+  },
+  {
+   "meetingId": "summer-school-20261020",
+   "memberId": "blaz.bizjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260916",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260916",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260916",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260916",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260916",
+   "memberId": "katja.lesjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260916",
+   "memberId": "filip.rozman",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260923",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260923",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260923",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260923",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260923",
+   "memberId": "katja.lesjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260923",
+   "memberId": "filip.rozman",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260930",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260930",
+   "memberId": "maja.horvat",
+   "status": "missed"
+  },
+  {
+   "meetingId": "grants-20260930",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260930",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260930",
+   "memberId": "katja.lesjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20260930",
+   "memberId": "filip.rozman",
+   "status": "excused"
+  },
+  {
+   "meetingId": "grants-20261007",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261007",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261007",
+   "memberId": "jan.potocnik",
+   "status": "remote"
+  },
+  {
+   "meetingId": "grants-20261007",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261007",
+   "memberId": "katja.lesjak",
+   "status": "remote"
+  },
+  {
+   "meetingId": "grants-20261007",
+   "memberId": "filip.rozman",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261014",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261014",
+   "memberId": "maja.horvat",
+   "status": "excused"
+  },
+  {
+   "meetingId": "grants-20261014",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261014",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261014",
+   "memberId": "katja.lesjak",
+   "status": "excused"
+  },
+  {
+   "meetingId": "grants-20261014",
+   "memberId": "filip.rozman",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261021",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261021",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261021",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261021",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261021",
+   "memberId": "katja.lesjak",
+   "status": "present"
+  },
+  {
+   "meetingId": "grants-20261021",
+   "memberId": "filip.rozman",
+   "status": "missed"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "sara.mlakar",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "zala.turk",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "nejc.kralj",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260916",
+   "memberId": "urban.petek",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "zala.turk",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "nejc.kralj",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-tech-20260923",
+   "memberId": "urban.petek",
+   "status": "missed"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "zala.turk",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "nejc.kralj",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20260930",
+   "memberId": "urban.petek",
+   "status": "missed"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "maja.horvat",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "sara.mlakar",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "zala.turk",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "nejc.kralj",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261007",
+   "memberId": "urban.petek",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "zala.turk",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "nejc.kralj",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261014",
+   "memberId": "urban.petek",
+   "status": "missed"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "maja.horvat",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "sara.mlakar",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "zala.turk",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "nejc.kralj",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-tech-20261021",
+   "memberId": "urban.petek",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260917",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260917",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260917",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260917",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260917",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260924",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260924",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260924",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260924",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20260924",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261001",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261001",
+   "memberId": "jan.potocnik",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shape-talks-20261001",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261001",
+   "memberId": "matic.kos",
+   "status": "missed"
+  },
+  {
+   "meetingId": "shape-talks-20261001",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261008",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261008",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261008",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261008",
+   "memberId": "matic.kos",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shape-talks-20261008",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261015",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261015",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261015",
+   "memberId": "eva.vidmar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261015",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261015",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261022",
+   "memberId": "luka.novak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261022",
+   "memberId": "jan.potocnik",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261022",
+   "memberId": "eva.vidmar",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shape-talks-20261022",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shape-talks-20261022",
+   "memberId": "petra.jerman",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260917",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260917",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260917",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260917",
+   "memberId": "matic.kos",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-voice-20260917",
+   "memberId": "sara.mlakar",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-voice-20260917",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260917",
+   "memberId": "neza.oblak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260924",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260924",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260924",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260924",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260924",
+   "memberId": "sara.mlakar",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-voice-20260924",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20260924",
+   "memberId": "neza.oblak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261001",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261001",
+   "memberId": "ziga.krajnc",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shapers-voice-20261001",
+   "memberId": "nina.zupan",
+   "status": "remote"
+  },
+  {
+   "meetingId": "shapers-voice-20261001",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261001",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261001",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261001",
+   "memberId": "neza.oblak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261008",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261008",
+   "memberId": "ziga.krajnc",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shapers-voice-20261008",
+   "memberId": "nina.zupan",
+   "status": "missed"
+  },
+  {
+   "meetingId": "shapers-voice-20261008",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261008",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261008",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261008",
+   "memberId": "neza.oblak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261015",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261015",
+   "memberId": "ziga.krajnc",
+   "status": "excused"
+  },
+  {
+   "meetingId": "shapers-voice-20261015",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261015",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261015",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261015",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261015",
+   "memberId": "neza.oblak",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261022",
+   "memberId": "ana.kovac",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261022",
+   "memberId": "ziga.krajnc",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261022",
+   "memberId": "nina.zupan",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261022",
+   "memberId": "matic.kos",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261022",
+   "memberId": "sara.mlakar",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261022",
+   "memberId": "rok.golob",
+   "status": "present"
+  },
+  {
+   "meetingId": "shapers-voice-20261022",
+   "memberId": "neza.oblak",
+   "status": "missed"
+  }
+ ]
+}
