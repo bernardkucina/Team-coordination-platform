@@ -1,0 +1,28 @@
+// attendance service: who showed up to which meeting.
+
+enum AttendanceStatus {
+  present
+  remote
+  excused
+  /// "unexcused" in the sandbox data.
+  missed
+}
+
+enum AttendanceSource {
+  self
+  admin
+}
+
+model AttendanceRecord {
+  meetingId   String
+  meeting     Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  memberId    String
+  member      Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status      AttendanceStatus
+  source      AttendanceSource
+  clockedInAt DateTime?
+  updatedAt   DateTime         @updatedAt
+
+  @@id([meetingId, memberId])
+  @@index([memberId])
+}

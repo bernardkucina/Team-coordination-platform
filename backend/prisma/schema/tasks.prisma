@@ -1,0 +1,116 @@
+// tasks service: projects, workstreams, tasks and the task history.
+
+model Project {
+  id          String   @id
+  name        String
+  description String   @default("")
+  leadId      String?
+  lead        Member?  @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  workstreams Workstream[]
+  tasks       Task[]
+  timeEntries TimeEntry[]
+  series      MeetingSeries[]
+  timers      ActiveTimer[]
+}
+
+model Workstream {
+  id          Int     @id @default(autoincrement())
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  color       String
+  leadId      String?
+  lead        Member? @relation("WorkstreamLead", fields: [leadId], references: [id], onDelete: SetNull)
+  /// Tasks finished before the platform existed (from the old Miro board).
+  doneEarlier Int     @default(0)
+  position    Int
+
+  @@unique([projectId, name])
+}
+
+enum TaskStatus {
+  idea
+  priority
+  progress
+  validation
+  done
+}
+
+enum Priority {
+  High
+  Medium
+  Low
+}
+
+model Task {
+  id          Int        @id @default(autoincrement())
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// Name of a workstream in the same project.
+  workstream  String
+  title       String
+  status      TaskStatus @default(priority)
+  ownerId     String?
+  owner       Member?    @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   Member?    @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  priority    Priority   @default(Medium)
+  startWeek   Int?
+  endWeek     Int?
+  due         DateTime?  @db.Date
+  notes       String     @default("")
+  /// When the task was last moved to done; cleared when it leaves done.
+  doneAt      DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  helpers TaskHelper[]
+  links   TaskLink[]
+  events  TaskEvent[]
+
+  @@index([projectId])
+  @@index([ownerId])
+}
+
+model TaskHelper {
+  taskId   Int
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, memberId])
+}
+
+model TaskLink {
+  id       Int    @id @default(autoincrement())
+  taskId   Int
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label    String
+  url      String
+  position Int
+}
+
+enum TaskEventKind {
+  created
+  updated
+  /// A member made themselves owner of a task nobody owned.
+  picked
+  comment
+}
+
+model TaskEvent {
+  id        Int           @id @default(autoincrement())
+  taskId    Int
+  task      Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     Member?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  kind      TaskEventKind
+  text      String
+  comment   String?
+  createdAt DateTime      @default(now())
+
+  @@index([taskId, createdAt])
+  @@index([actorId, createdAt])
+}

@@ -1,0 +1,52 @@
+// hours service: time entries and running "Track time" timers.
+
+enum TimeSource {
+  manual
+  meeting
+}
+
+model TimeEntry {
+  id        Int        @id @default(autoincrement())
+  memberId  String
+  member    Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  /// Local (Europe/Ljubljana) calendar date.
+  date      DateTime   @db.Date
+  /// Minutes after local midnight.
+  startMin  Int
+  endMin    Int
+  note      String     @default("")
+  source    TimeSource @default(manual)
+  meetingId String?
+  createdAt DateTime   @default(now())
+
+  @@index([memberId, date])
+  @@index([date])
+}
+
+enum TimerKind {
+  work
+  meeting
+}
+
+enum TrackingMode {
+  present
+  remote
+}
+
+/// At most one running timer of each kind per member.
+model ActiveTimer {
+  id        Int           @id @default(autoincrement())
+  memberId  String
+  member    Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  kind      TimerKind
+  projectId String?
+  project   Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  meetingId String?
+  meeting   Meeting?      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  mode      TrackingMode?
+  startedAt DateTime
+
+  @@unique([memberId, kind])
+}

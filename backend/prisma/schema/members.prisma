@@ -1,0 +1,42 @@
+// members service: people, tiers, roles and login sessions.
+
+enum Tier {
+  GO
+  IMPACT
+  CORE
+}
+
+model Member {
+  id       String    @id
+  email    String    @unique
+  name     String
+  tier     Tier
+  isAdmin  Boolean   @default(false)
+  active   Boolean   @default(true)
+  joinedOn DateTime? @db.Date
+  createdAt DateTime @default(now())
+
+  sessions Session[]
+
+  // Back-relations from the other services' models.
+  projectsLed    Project[]          @relation("ProjectLead")
+  workstreamsLed Workstream[]       @relation("WorkstreamLead")
+  ownedTasks     Task[]             @relation("TaskOwner")
+  createdTasks   Task[]             @relation("TaskCreator")
+  helping        TaskHelper[]
+  taskEvents     TaskEvent[]
+  timeEntries    TimeEntry[]
+  timers         ActiveTimer[]
+  series         SeriesMember[]
+  attendance     AttendanceRecord[]
+}
+
+model Session {
+  id        String   @id
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([memberId])
+}
