@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { TIER_HOURS, type AccessMember, type Role, type Tier } from '@hub-pulse/shared';
 import { api } from '@/lib/api';
 import { Avatar, Icon, Toggle } from './ui';
@@ -77,21 +77,11 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
     <div className="shell">
       <main className="main access">
         <div className="container">
-          {/* The super admin has one screen, so a bar with the brand and sign-out replaces the app menu. */}
-          <div className="access-bar">
-            <span className="brand">
-              <span className="brand-mark">{Icon.hub}</span>
-              <span><strong>Shapers Hub</strong><small>Access management</small></span>
-            </span>
-            <span className="inline" style={{ gap: 10, flexWrap: 'nowrap' }}>
-              <Avatar small initials="SA" />
-              <span className="small strong">super admin</span>
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => void onSignOut()}>Sign out</button>
-            </span>
-          </div>
+          {/* The super admin has one screen; the same burger menu as the app holds the page and sign-out. */}
+          <AccessMenu onSignOut={onSignOut} />
 
           <header className="stack" style={{ gap: 10 }}>
-            <h1>Access</h1>
+            <h1 id="access-h">Access</h1>
             <p className="small muted" style={{ margin: 0 }}>Who can sign in, who is an admin, and which Slack account gets their reminders.</p>
             <dl className="stat-strip" aria-label="Access summary" style={{ margin: '4px 0 0' }}>
               <div><dt>People</dt><dd>{members ? members.length : '…'}</dd></div>
@@ -208,5 +198,43 @@ function SlackEmail({ member, disabled, onSave }: { member: AccessMember; disabl
       />
       {member.slackLinked ? <span className="pill good">Linked</span> : null}
     </span>
+  );
+}
+
+/** Burger menu for the super admin, styled like the app menu: Access (this page) and Log out. */
+function AccessMenu({ onSignOut }: { onSignOut: () => Promise<void> }) {
+  const [pinned, setPinned] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!pinned) return;
+    const close = (e: MouseEvent) => { if (wrap.current && !wrap.current.contains(e.target as Node)) setPinned(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setPinned(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc); };
+  }, [pinned]);
+
+  return (
+    <div className={pinned ? 'menu-hover pinned' : 'menu-hover'} ref={wrap} onMouseLeave={() => setPinned(false)}>
+      <button type="button" className="menu-toggle" aria-label="Menu" aria-expanded={pinned} onClick={() => setPinned(!pinned)}>
+        <span /><span /><span />
+      </button>
+      <div className="menu-peek" role="menu" aria-label="Go to">
+        <a href="#access-h" role="menuitem" aria-current="page" onClick={() => setPinned(false)}>
+          {Icon.lock}
+          Access
+        </a>
+        <button type="button" role="menuitem" className="menu-logout" onClick={() => { setPinned(false); void onSignOut(); }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><polyline points="10 8 6 12 10 16" /><line x1="6" y1="12" x2="16" y2="12" />
+          </svg>
+          Log out
+        </button>
+        <div className="menu-peek-foot">
+          <span className="tiny">super admin</span>
+          <span className="tiny">Access management</span>
+        </div>
+      </div>
+    </div>
   );
 }

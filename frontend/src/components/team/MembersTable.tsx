@@ -6,7 +6,9 @@ import { attendanceStats, memberWeeks, paceStatus } from '@/lib/rules';
 import { hoursText } from '@/lib/time';
 import { Avatar, Progress } from '../ui';
 
-/** Every member's hours, commitment streak, attendance and hub share over the last weeks. */
+const CENTER = { textAlign: 'center' } as const;
+
+/** Every member's hours, tasks done, attendance and hub share over the last weeks. */
 export function MembersTable() {
   const { state } = useStore();
   const perMember = state.members.map((m) => ({ m, weeks: memberWeeks(m, state.timeEntries, state.tasks) }));
@@ -23,10 +25,10 @@ export function MembersTable() {
           <tr>
             <th>Member</th>
             <th>This week</th>
-            <th className="num">Weeks at commitment</th>
-            <th className="num">Hours</th>
-            <th className="num">Attendance</th>
-            <th style={{ width: 170 }}>Hub / remote</th>
+            <th style={CENTER}>Tasks done</th>
+            <th style={CENTER}>Hours</th>
+            <th style={CENTER}>Attendance</th>
+            <th style={{ ...CENTER, width: 200, paddingLeft: 40 }}>Hub / remote</th>
           </tr>
         </thead>
         <tbody>
@@ -43,7 +45,7 @@ export function MembersTable() {
               return { m, c, done, met, hours, hub, tasks, st, now };
             })
             .sort((a, b) => a.met / Math.max(1, a.done.length) - b.met / Math.max(1, b.done.length) || a.now.hours / a.c - b.now.hours / b.c)
-            .map(({ m, c, done, met, hours, hub, tasks, st, now }) => {
+            .map(({ m, c, hours, hub, tasks, st, now }) => {
               const behindNow = paceStatus(now.hours, m) === 'behind';
               return (
                 <tr key={m.id}>
@@ -56,10 +58,10 @@ export function MembersTable() {
                       <Progress value={now.hours} max={c} />
                     </span>
                   </td>
-                  <td className="num"><strong>{met}</strong> of {done.length}</td>
-                  <td className="num">{hoursText(hours)}</td>
-                  <td className="num" style={{ color: st.rate !== null && st.rate < 70 ? 'var(--bad)' : undefined }}>{st.rate === null ? '—' : `${st.rate} %`}</td>
-                  <td>
+                  <td style={CENTER}><strong>{tasks}</strong></td>
+                  <td style={CENTER}>{hoursText(hours)}</td>
+                  <td style={{ ...CENTER, color: st.rate !== null && st.rate < 70 ? 'var(--bad)' : undefined }}>{st.rate === null ? '—' : `${st.rate} %`}</td>
+                  <td style={{ paddingLeft: 40 }}>
                     <span className="inline" style={{ gap: 8, flexWrap: 'nowrap' }}>
                       <span style={{ display: 'flex', gap: 2, height: 10, flex: '1 1 auto' }} aria-hidden="true">
                         <span style={{ flex: `${hub} 1 0`, background: 'var(--hub)', borderRadius: 3 }} />

@@ -11,10 +11,10 @@ interface Row { id: string; value: number; label: string; detail: string }
 const visitsFrom = (hubHours: number) => (hubHours > 0 ? Math.min(5, Math.max(1, Math.round(hubHours / 3))) : 0);
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
-/** Teambuildings are a calendar series like any other; the board shows once the calendar has one. */
-const isTeambuilding = (name: string) => /teambuilding/i.test(name);
+/** Teambuildings are a calendar series like any other: any series with "teambuilding" / "team building" in its name. */
+const isTeambuilding = (name: string) => /team[\s-]?building/i.test(name);
 
-/** Small leaderboards: hub visits, teambuildings (when there are any) and meetings attended in person. */
+/** Small leaderboards: hub visits, teambuildings and meetings attended in person. */
 export function Leaderboards() {
   const { state, me } = useStore();
   const past = state.meetings.filter((m) => meetingPhase(m) === 'past');
@@ -45,25 +45,25 @@ export function Leaderboards() {
       <h2 id="lb-h">Leaderboards</h2>
       <div className="lb-grid">
         <Board title="🏢 In the hub" note={`Visits in the last ${state.me.pastWeeks.length + 1} weeks`} rows={office} me={me.id} />
-        {teambuilding.size ? <Board title="🎉 Teambuildings" note="Share of teambuildings joined" rows={share((id) => teambuilding.has(id))} me={me.id} /> : null}
+        <Board title="🎉 Teambuildings" note="Share of teambuildings joined" rows={share((id) => teambuilding.has(id))} me={me.id} empty="No teambuildings yet." />
         <Board title="🤝 Meetings in person" note="Share of meetings attended live" rows={share((id) => !teambuilding.has(id))} me={me.id} />
       </div>
     </section>
   );
 }
 
-function Board({ title, note, rows, me }: { title: string; note: string; rows: Row[]; me: string }) {
+function Board({ title, note, rows, me, empty }: { title: string; note: string; rows: Row[]; me: string; empty?: string }) {
   const { state } = useStore();
   const ranked = [...rows].sort((a, b) => b.value - a.value);
-  const top = ranked.slice(0, 5);
-  const myIndex = ranked.findIndex((r) => r.id === me);
-  const shown = myIndex >= 5 ? [...top, ranked[myIndex]] : top;
+  // Everyone is listed; the card has a fixed height and the list scrolls.
+  const shown = ranked;
   return (
     <article className="card lb" aria-label={title}>
       <div className="stack" style={{ gap: 2 }}>
         <h3>{title}</h3>
         <span className="tiny muted">{note}</span>
       </div>
+      {shown.length === 0 ? <p className="small muted" style={{ margin: 0 }}>{empty ?? 'Nothing here yet.'}</p> : null}
       <ol>
         {shown.map((r) => {
           const m = state.members.find((x) => x.id === r.id);

@@ -97,7 +97,7 @@ export function Board({ projects, tasks, mineOnly, drag, over, setOver, startDra
                               return (
                                 <div
                                   key={t.id}
-                                  className="sticky"
+                                  className={t.priority === 'High' && t.status !== 'done' ? 'sticky high' : 'sticky'}
                                   draggable
                                   onDragStart={(e) => startDrag(e, t)}
                                   onDragEnd={endDrag}
@@ -109,7 +109,7 @@ export function Board({ projects, tasks, mineOnly, drag, over, setOver, startDra
                                 >
                                   <button type="button" onClick={() => open(t)} aria-label={`${t.title}, owner ${memberName(t.owner)}`}>
                                     <span className="t">
-                                      {t.priority === 'High' ? <span className="prio-dot" title="High priority" aria-label="High priority" /> : null}
+                                      {t.priority === 'High' ? <span className="sr-only">High priority: </span> : null}
                                       {t.title}
                                     </span>
                                     <span className="between" style={{ width: '100%', alignItems: 'center', flexWrap: 'nowrap' }}>

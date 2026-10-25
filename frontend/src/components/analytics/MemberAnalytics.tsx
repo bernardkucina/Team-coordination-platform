@@ -25,7 +25,6 @@ export function MemberAnalytics() {
   const totalHours = weeks.reduce((a, w) => a + w.hours, 0);
   const totalHub = weeks.reduce((a, w) => a + w.hub, 0);
   const totalTasks = weeks.reduce((a, w) => a + w.tasksDone, 0);
-  const metWeeks = finished.filter((w) => w.hours >= commitment).length;
   let streak = 0;
   for (let i = finished.length - 1; i >= 0 && finished[i].hours >= commitment; i--) streak++;
   let bestRun = 0;
@@ -67,7 +66,7 @@ export function MemberAnalytics() {
       <div className="between" style={{ alignItems: 'center', gap: 20 }}>
         <dl className="stat-strip" aria-label="Summary">
           <div><dt>Logged</dt><dd>{hoursText(totalHours)}</dd></div>
-          <div><dt>Commitment met</dt><dd>{metWeeks} of {finished.length} weeks</dd></div>
+          <div><dt>From the hub</dt><dd>{pct(totalHub, totalHours)} %</dd></div>
           <div><dt>Meetings</dt><dd>{stats.rate === null ? '—' : `${stats.rate} %`}</dd></div>
         </dl>
         <div className="streak-box" aria-label="Weekly streak">

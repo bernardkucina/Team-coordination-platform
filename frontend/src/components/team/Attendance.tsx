@@ -45,7 +45,7 @@ export function Attendance() {
     .sort((a, b) => (a.stats.rate ?? 999) - (b.stats.rate ?? 999));
 
   return (
-    <div className="stack" style={{ gap: 24 }}>
+    <div className="stack" style={{ gap: 'var(--gap)' }}>
       <div className="between" style={{ alignItems: 'flex-end' }}>
         <div className="stack" style={{ gap: 4 }}>
           <h2 id="att-h">Attendance by person, last 6 weeks</h2>

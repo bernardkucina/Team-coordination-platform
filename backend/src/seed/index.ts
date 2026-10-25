@@ -22,6 +22,8 @@ import { importCalendarEvents, parseIcs } from '../services/meetings';
 import { CREATED_TEXT, IDEA_CREATED_TEXT, slugify } from '../services/tasks';
 import { readSheet, text, toIsoDate } from './xlsx';
 import { SAMPLE_PROJECTS, SAMPLE_TASKS, type SampleTask } from './sample-projects';
+import { seedTeambuildings } from './teambuildings';
+import { seedDemoTasks } from './demo-tasks';
 
 const MATERIAL = process.env.SEED_MATERIAL_DIR ?? resolve(fileURLToPath(import.meta.url), '../../../../material');
 /** Attendance exists for every meeting before this date (SANDBOX.md). */
@@ -226,7 +228,10 @@ const main = async () => {
   const reset = process.argv.includes('--reset');
   if ((await db.member.count()) > 0) {
     if (process.argv.includes('--if-empty')) {
-      console.log('The database already has data; not seeding.');
+      // Made-up extras are idempotent, so existing databases get them too.
+      const tb = await seedTeambuildings();
+      const tasks = await seedDemoTasks();
+      console.log(`The database already has data; not seeding. Added ${tb.records} teambuilding records, ${tasks} demo tasks.`);
       return;
     }
     if (!reset) {
@@ -246,6 +251,9 @@ const main = async () => {
   console.log(`  projects: ${SAMPLE_PROJECTS.length}, tasks: ${await seedTasks()}`);
   const hours = await seedHours();
   console.log(`  hours: ${hours.weeks} weekly rows → ${hours.entries} entries, ${hours.hours} h`);
+  const tb = await seedTeambuildings();
+  console.log(`  teambuildings: ${tb.meetings} evenings, ${tb.records} attendance records`);
+  console.log(`  demo tasks for this week: ${await seedDemoTasks()}`);
 };
 
 main()

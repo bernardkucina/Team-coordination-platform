@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { TIER_HOURS, type Tier } from '@/lib/types';
 import { attendanceStats, isSuperstar, paceStatus, weekHours } from '@/lib/rules';
@@ -18,7 +18,8 @@ const PACE_LOOK = {
 export function People() {
   const { state } = useStore();
   const [tier, setTier] = useState<Tier | 'all'>('all');
-  const show = 'watch' as Show;
+  const show = 'all' as Show;
+  const tierOrder = Object.keys(TIER_HOURS) as Tier[];
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Who needs attention: behind the pace expected by today (so early in the week almost nobody is),
@@ -32,7 +33,8 @@ export function People() {
     .filter(({ m }) => tier === 'all' || m.tier === tier)
     .filter((r) => show !== 'watch' || r.behindNow || r.shortLast)
     .filter(({ m, hours }) => show !== 'stars' || isSuperstar(hours, m))
-    .sort((a, b) => Number(b.behindNow && b.shortLast) - Number(a.behindNow && a.shortLast) || a.hours / TIER_HOURS[a.m.tier] - b.hours / TIER_HOURS[b.m.tier]);
+    // Grouped by tier; inside a tier, the ones furthest behind first.
+    .sort((a, b) => tierOrder.indexOf(a.m.tier) - tierOrder.indexOf(b.m.tier) || Number(b.behindNow && b.shortLast) - Number(a.behindNow && a.shortLast) || a.hours / TIER_HOURS[a.m.tier] - b.hours / TIER_HOURS[b.m.tier]);
 
   const sel = state.members.find((m) => m.id === selectedId) ?? rows[0]?.m ?? state.members[0];
   const selHours = weekHours(state.timeEntries, sel.id);
@@ -47,23 +49,34 @@ export function People() {
         <Segmented<Tier | 'all'> label="Tier" value={tier} onChange={setTier} options={[{ value: 'all', label: 'All tiers' }, ...(Object.keys(TIER_HOURS) as Tier[]).map((t) => ({ value: t, label: t }))]} />
       </div>
 
-      <div className="row" style={{ alignItems: 'stretch' }}>
+      <div className="row" style={{ alignItems: 'flex-start' }}>
         <section className="card" aria-labelledby="list-h" style={{ flex: '3 1 500px', minWidth: 0, padding: 20, gap: 8 }}>
-          <h2 id="list-h" style={{ fontSize: 18 }}>{show === 'watch' ? 'Needs attention' : show === 'stars' ? 'Superstars' : 'Members'} <span className="muted" style={{ fontWeight: 500, fontSize: 15 }}>{rows.length}</span></h2>
+          <h2 id="list-h" style={{ fontSize: 18 }}>{show === 'watch' ? 'Needs attention' : show === 'stars' ? 'Superstars' : 'People and hours'} <span className="muted" style={{ fontWeight: 500, fontSize: 15 }}>{rows.length}</span></h2>
           {show === 'watch' ? (
             <p className="small muted">Behind the pace expected by today ({Math.round(WEEK_PACE * 100)} % of the week in week {CURRENT_WEEK}), or short of their commitment last week.</p>
+          ) : null}
+          {show === 'all' ? (
+            <p className="small muted">Hours this week against each tier's weekly commitment, by tier. Furthest behind first.</p>
           ) : null}
           {show === 'stars' ? (
             <p className="small muted">Superstars are on pace or ahead and took initiative this month: picked up at least 2 open tasks, or added at least 2 ideas.</p>
           ) : null}
           <div className="people-scroll">
           {rows.length === 0 ? <p className="small muted">Nobody here right now.</p> : null}
-          {rows.map(({ m, hours }) => {
+          {rows.map(({ m, hours }, i) => {
             const pace = PACE_LOOK[paceStatus(hours, m)];
             const on = m.id === sel.id;
+            const tierStart = tier === 'all' && (i === 0 || rows[i - 1].m.tier !== m.tier);
+            const inTier = tierStart ? rows.filter((r) => r.m.tier === m.tier).length : 0;
             return (
+              <Fragment key={m.id}>
+              {tierStart ? (
+                <h3 className="tiny muted" style={{ margin: i === 0 ? '4px 0 0' : '10px 0 0', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700 }}>
+                  {m.tier} · {TIER_HOURS[m.tier]} h a week · {inTier}
+                </h3>
+              ) : null}
               <button
-                key={m.id} type="button" aria-pressed={on} onClick={() => setSelectedId(m.id)}
+                type="button" aria-pressed={on} onClick={() => setSelectedId(m.id)}
                 className="people-row" style={{ border: `1px solid ${on ? 'var(--ink)' : 'var(--line-soft)'}`, background: on ? 'var(--surface-2)' : 'var(--surface)' }}
               >
                 <Avatar initials={m.initials} />
@@ -80,6 +93,7 @@ export function People() {
                   {isSuperstar(hours, m) ? <span className="pill warn" style={{ fontWeight: 700 }}>{Icon.star}Superstar</span> : null}
                 </span>
               </button>
+              </Fragment>
             );
           })}
           </div>
@@ -90,7 +104,7 @@ export function People() {
             <Avatar initials={sel.initials} style={{ width: 48, height: 48, fontSize: 16, background: 'var(--blue)', color: '#fff' }} />
             <div className="stack" style={{ gap: 2 }}>
               <h2 id="det-h">{sel.name}</h2>
-              <span className="small muted">{sel.tier} · {commitment} h a week · since {sel.since}</span>
+              <span className="small muted">{sel.tier} · {commitment} h a week{sel.since ? ` · since ${sel.since}` : ''}</span>
             </div>
           </div>
           <div className="grid-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>

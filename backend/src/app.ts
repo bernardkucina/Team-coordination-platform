@@ -16,6 +16,25 @@ import { hoursRouter } from './services/hours';
 import { analyticsRouter } from './services/analytics';
 import { registerSlackListeners, slackRouter } from './services/slack';
 import { gatewayRouter } from './gateway/routes';
+import { seedTeambuildings } from './seed/teambuildings';
+import { seedDemoTasks } from './seed/demo-tasks';
+
+/**
+ * Made-up sandbox data that is not in /material (teambuildings, open tasks for this week) is written to the database once per process,
+ * so a database seeded before it existed gets it without a re-seed. Idempotent; never blocks the app on failure.
+ */
+let demoData: Promise<void> | null = null;
+const ensureDemoData = () =>
+  (demoData ??= (async () => {
+    try {
+      const tb = await seedTeambuildings();
+      if (tb.records) console.log(`Demo data: added ${tb.records} teambuilding attendance records`);
+      const tasks = await seedDemoTasks();
+      if (tasks) console.log(`Demo data: added ${tasks} open tasks for this week`);
+    } catch (err) {
+      console.warn('Demo data: could not add it', err);
+    }
+  })());
 
 /** @param frontend Handles every non-API request (the Next.js app) when the frontend is served from here. */
 export const createApp = (frontend?: RequestHandler) => {
@@ -28,6 +47,10 @@ export const createApp = (frontend?: RequestHandler) => {
   });
 
   const api = Router();
+  api.use(async (_req, _res, next) => {
+    await ensureDemoData();
+    next();
+  });
   api.use(express.json({ limit: '1mb' }));
   api.use(cookieParser());
   api.use(loadSession);

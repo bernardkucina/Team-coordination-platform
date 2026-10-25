@@ -50,9 +50,9 @@ export function SlackCard() {
             {status.linked} of {status.members} members linked to Slack{status.interactive ? '' : ' · buttons in Slack need SLACK_SIGNING_SECRET'}.
             Reminders 10 min before meetings, &quot;did you attend?&quot; after, a daily summary for project leads and a monthly report.
           </span>
-          <div className="stack" style={{ gap: 6 }}>
+          <div className="inline" style={{ gap: 8, justifyContent: 'flex-start' }}>
             {JOBS.map((j) => (
-              <button key={j.job} type="button" className="btn btn-outline btn-sm" disabled={busy !== null} onClick={() => void run(j)}>
+              <button key={j.job} type="button" className="btn btn-outline btn-sm" style={{ minHeight: 30, padding: '0 14px', fontSize: 12.5 }} disabled={busy !== null} onClick={() => void run(j)}>
                 {busy === j.job ? 'Working…' : j.label}
               </button>
             ))}

@@ -74,7 +74,7 @@ export function ProjectPanel({ project, onClose, openTask, change }: {
     return (
       <li
         key={t.id}
-        className={[isDone ? 'done' : '', sortable && overId === t.id && dragId !== t.id ? 'drop-above' : '', dragId === t.id ? 'dragging' : ''].join(' ')}
+        className={[isDone ? 'done' : '', t.priority === 'High' && !isDone ? 'high' : '', sortable && overId === t.id && dragId !== t.id ? 'drop-above' : '', dragId === t.id ? 'dragging' : ''].join(' ')}
         draggable={sortable}
         onDragStart={sortable ? (e: DragEvent) => { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.effectAllowed = 'move'; setDragId(t.id); } : undefined}
         onDragOver={sortable ? (e: DragEvent) => { e.preventDefault(); if (overId !== t.id) setOverId(t.id); } : undefined}
@@ -91,7 +91,7 @@ export function ProjectPanel({ project, onClose, openTask, change }: {
         >{isDone ? '✓' : ''}</button>
         <button type="button" className="todo-main" onClick={() => openTask(t)}>
           <span className="todo-title">
-            {t.priority === 'High' && !isDone ? <span className="prio-dot" title="High priority" /> : null}
+            {t.priority === 'High' && !isDone ? <span className="sr-only">High priority: </span> : null}
             {t.title}
           </span>
           <span className="inline tiny muted" style={{ gap: 6 }}>
