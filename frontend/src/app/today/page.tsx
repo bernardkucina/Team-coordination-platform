@@ -25,8 +25,10 @@ export default function TodayPage() {
 
       <div className="row">
         <div className="col-main">
-          {/* Members start from their tasks; admins start from the meetings they run. */}
-          {isAdmin ? <><TodayMeetings /><DidYouAttend /><MyTasks /></> : <><MyTasks /><TodayMeetings /><DidYouAttend /></>}
+          {/* Today's meetings come first for everyone, then tasks. */}
+          <TodayMeetings />
+          <DidYouAttend />
+          <MyTasks />
         </div>
         <div className="col-side">
           <HoursCard title={isAdmin ? 'My hours this week' : 'Hours this week'} />

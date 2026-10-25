@@ -22,6 +22,26 @@ export function Segmented<T extends string>({
   );
 }
 
+/** Two-way switch with a label on each side; the left option is "off". */
+export function Toggle<T extends string>({
+  label, value, left, right, onChange,
+}: {
+  label: string;
+  value: T;
+  left: { value: T; label: ReactNode };
+  right: { value: T; label: ReactNode };
+  onChange: (value: T) => void;
+}) {
+  const on = value === right.value;
+  return (
+    <div className="place-toggle">
+      <button type="button" className="toggle-label" data-on={!on} onClick={() => onChange(left.value)}>{left.label}</button>
+      <button type="button" role="switch" className="switch" aria-checked={on} aria-label={label} onClick={() => onChange(on ? left.value : right.value)}><span /></button>
+      <button type="button" className="toggle-label" data-on={on} onClick={() => onChange(right.value)}>{right.label}</button>
+    </div>
+  );
+}
+
 export function Progress({ value, max, large, color }: { value: number; max: number; large?: boolean; color?: string }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
@@ -58,9 +78,11 @@ export interface Column {
   valueText: string;
   tip: string;
   current?: boolean;
+  /** Stacked segments, bottom first. When set, they replace the single bar. */
+  parts?: { value: number; color: string }[];
 }
 
-/** Simple column chart with an optional dashed reference line (e.g. weekly commitment). */
+/** Column chart (optionally stacked) with an optional dashed reference line (e.g. weekly commitment). */
 export function ColumnChart({
   columns, height = 180, refValue, max,
 }: {
@@ -79,8 +101,28 @@ export function ColumnChart({
         {columns.map((c) => (
           <div key={c.key} className="col" onMouseEnter={() => setHover(c.key)} onMouseLeave={() => setHover(null)}>
             {hover === c.key ? <div className="tip" role="tooltip">{c.tip}</div> : null}
-            <span className="v">{c.valueText}</span>
-            <div className={c.current ? 'b current' : 'b'} style={{ height: px(c.value) }} />
+            {(() => {
+              const total = c.parts ? c.parts.filter((p) => p.value > 0).reduce((a, p) => a + px(p.value), 0) + 2 * Math.max(0, c.parts.filter((p) => p.value > 0).length - 1) : px(c.value);
+              const visible = c.parts?.filter((p) => p.value > 0) ?? [];
+              const topColor = visible.length ? visible[visible.length - 1].color : c.current ? 'light' : 'dark';
+              const dark = !c.current && /hub|ink|navy|dark/.test(topColor);
+              const inside = total >= 22 && c.valueText !== '';
+              return (
+                <div className="col-bar">
+                  {!inside && c.valueText ? <span className="v">{c.valueText}</span> : null}
+                  {c.parts ? (
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column-reverse', gap: 2, opacity: c.current ? 0.55 : 1 }}>
+                      {visible.map((p, i, all) => (
+                        <div key={i} style={{ height: px(p.value), background: p.color, borderRadius: i === all.length - 1 ? '4px 4px 0 0' : 0 }} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={c.current ? 'b current' : 'b'} style={{ height: px(c.value) }} />
+                  )}
+                  {inside ? <span className="v-in" style={{ color: dark ? '#fff' : 'var(--ink)' }}>{c.valueText}</span> : null}
+                </div>
+              );
+            })()}
           </div>
         ))}
       </div>
@@ -95,6 +137,16 @@ export const Icon = {
   pulse: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="3 12 7 12 10 5 14 19 17 12 21 12" />
+    </svg>
+  ),
+  /** Shapers Hub mark: people (dots) joined to one shared centre. */
+  hub: (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <g stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <line x1="12" y1="12" x2="12" y2="4.5" /><line x1="12" y1="12" x2="18.5" y2="16" /><line x1="12" y1="12" x2="5.5" y2="16" />
+      </g>
+      <circle cx="12" cy="12" r="3.6" fill="currentColor" />
+      <circle cx="12" cy="4" r="2.4" fill="currentColor" /><circle cx="19" cy="16.4" r="2.4" fill="currentColor" /><circle cx="5" cy="16.4" r="2.4" fill="currentColor" />
     </svg>
   ),
   sun: (
@@ -121,6 +173,11 @@ export const Icon = {
   clock: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="13" r="8" /><polyline points="12 9 12 13 15 15" /><line x1="10" y1="2" x2="14" y2="2" />
+    </svg>
+  ),
+  video: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="6" width="14" height="12" rx="2" /><path d="M16 10l6-4v12l-6-4" />
     </svg>
   ),
   close: (

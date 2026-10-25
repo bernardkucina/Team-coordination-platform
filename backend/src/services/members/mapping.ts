@@ -1,5 +1,5 @@
 import type { Member as DbMember, Tier as DbTier } from '@prisma/client';
-import { TIER_HOURS, type Member, type Tier } from '@hub-pulse/shared';
+import { AREA_IDS, TIER_HOURS, type AreaId, type Member, type Tier } from '@hub-pulse/shared';
 import { fromDbDate } from '../../core/clock';
 
 const TIER_NAMES: Record<DbTier, Tier> = { GO: 'ShapersGO', IMPACT: 'Shapers Impact', CORE: 'Shapers Core' };
@@ -35,9 +35,19 @@ export interface MemberStats {
   picked: number;
   ideas: number;
   pastWeeks: number[];
+  pastWeeksHub: number[];
+  pastTasksDone: number[];
 }
 
-export const toMember = (m: DbMember, stats: MemberStats = { picked: 0, ideas: 0, pastWeeks: [] }): Member => {
+const NO_STATS: MemberStats = { picked: 0, ideas: 0, pastWeeks: [], pastWeeksHub: [], pastTasksDone: [] };
+
+/** A member row with the areas they joined (listMembers and getMember include them). */
+export type DbMemberWithAreas = DbMember & { areas?: { areaId: string }[] };
+
+const areasOf = (m: DbMemberWithAreas): AreaId[] =>
+  (m.areas ?? []).map((a) => a.areaId).filter((a): a is AreaId => (AREA_IDS as string[]).includes(a));
+
+export const toMember = (m: DbMemberWithAreas, stats: MemberStats = NO_STATS): Member => {
   const joined = m.joinedOn ? fromDbDate(m.joinedOn) : null;
   return {
     id: m.id,
@@ -49,6 +59,9 @@ export const toMember = (m: DbMember, stats: MemberStats = { picked: 0, ideas: 0
     picked: stats.picked,
     ideas: stats.ideas,
     pastWeeks: stats.pastWeeks,
+    pastWeeksHub: stats.pastWeeksHub,
+    pastTasksDone: stats.pastTasksDone,
+    areas: areasOf(m),
     email: m.email,
     active: m.active,
   };

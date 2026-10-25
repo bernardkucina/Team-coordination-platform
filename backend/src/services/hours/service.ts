@@ -91,9 +91,11 @@ export const deleteEntry = async (id: number, actor: SessionMember): Promise<voi
 };
 
 /** Hours per member per week (keyed by Monday) for local dates in [fromMonday, toDate]. */
-export const weeklyHours = async (fromMonday: string, toDate: string): Promise<Map<string, Map<string, number>>> => {
+export const weeklyHours = async (
+  fromMonday: string, toDate: string, location?: 'hub' | 'remote',
+): Promise<Map<string, Map<string, number>>> => {
   const entries = await db.timeEntry.findMany({
-    where: { date: { gte: toDbDate(fromMonday), lte: toDbDate(toDate) } },
+    where: { date: { gte: toDbDate(fromMonday), lte: toDbDate(toDate) }, ...(location && { location }) },
     select: { memberId: true, date: true, startMin: true, endMin: true },
   });
   const totals = new Map<string, Map<string, number>>();

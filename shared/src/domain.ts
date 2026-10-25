@@ -26,11 +26,51 @@ export interface Member {
   ideas: number;
   /** Hours for the 7 finished weeks before the current one, oldest first. */
   pastWeeks: number[];
+  /** Of those hours, how many were logged in the hub (the rest remote or unknown). Same order. */
+  pastWeeksHub: number[];
+  /** Tasks this member owned that were finished in each of those weeks. Same order. */
+  pastTasksDone: number[];
+  /** Areas (oddelki) the member joined directly, besides their projects. */
+  areas: AreaId[];
   /** Set by the API. */
   email?: string;
   /** Inactive members are hidden from pickers but keep their history. Set by the API. */
   active?: boolean;
 }
+
+/** The organisation's areas ("oddelki"). Every project has one main area; its board rows are areas. */
+export type AreaId = 'strategy' | 'money' | 'finance' | 'voice' | 'recruiting' | 'culture' | 'tech';
+
+export interface Area {
+  id: AreaId;
+  name: string;
+  /** What the area takes care of. */
+  about: string;
+  /** What you do there. */
+  work: string;
+  color: string;
+  /** Only Voice and Tech meet on their own so far. */
+  active: boolean;
+  /** Only Shapers Core members can join. */
+  coreOnly: boolean;
+}
+
+export const AREAS: Area[] = [
+  { id: 'strategy', name: 'Shapers Strategy', about: 'Kdo smo, kam gremo in kako merimo uspeh.', work: 'Sodeluješ pri postavljanju ciljev in pregledu, kako nam gre.', color: '#C9B8F0', active: false, coreOnly: true },
+  { id: 'money', name: 'Shapers Money', about: 'Pridobivanje sredstev: razpisi, sponzorji, donatorji.', work: 'Spremljaš razpise, pomagaš pisati prijave in iščeš sponzorje.', color: '#8EDC9A', active: false, coreOnly: false },
+  { id: 'finance', name: 'Shapers Finance', about: 'Proračuni projektov in pregled nad sredstvi.', work: 'Pomagaš pri proračunih projektov in vodenju evidenc.', color: '#B8E0D2', active: false, coreOnly: true },
+  { id: 'voice', name: 'Shapers Voice', about: 'Kako nas vidi svet: družbena omrežja, mediji, PR.', work: 'Snemaš in montiraš reele, oblikuješ grafike in pišeš objave.', color: '#F5A3A3', active: true, coreOnly: false },
+  { id: 'recruiting', name: 'Shapers Recruiting', about: 'Pridobivanje novih mladih, ki želijo več.', work: 'Pripravljaš kampanje za nove člane in pomagaš pri izboru.', color: '#F7E38A', active: false, coreOnly: false },
+  { id: 'culture', name: 'Shapers Culture', about: 'Skupnost, pripadnost in aktivnost članov.', work: 'Pripravljaš teambuildinge in druženja ter pomagaš pri uvajanju novih članov.', color: '#F6B27A', active: false, coreOnly: false },
+  { id: 'tech', name: 'Shapers Tech', about: 'Lastna orodja, programska oprema in interni procesi.', work: 'Z AI gradiš orodja (aplikacije, avtomatizacije, landerje) in urejaš spletno stran.', color: '#8FB4F0', active: true, coreOnly: false },
+];
+
+export const AREA_IDS = AREAS.map((a) => a.id) as AreaId[];
+
+export const areaById = (id: AreaId): Area => AREAS.find((a) => a.id === id) ?? AREAS[0];
+
+/** The area whose name is a board row's name, if any. */
+export const areaByName = (name: string): Area | undefined => AREAS.find((a) => a.name === name);
 
 export type TaskStatus = 'priority' | 'progress' | 'validation' | 'done' | 'idea';
 export type Priority = 'High' | 'Medium' | 'Low';
@@ -70,8 +110,11 @@ export interface Task {
   history: HistoryEntry[];
   /** ISO timestamp of when the task was last moved to done. Set by the API. */
   doneAt?: string | null;
+  /** Position in the project's to-do list once someone has reordered it (PUT /api/tasks/order). */
+  rank?: number | null;
 }
 
+/** A board row inside a project. Rows are the areas that work on the project (name = area name). */
 export interface Workstream {
   name: string;
   color: string;
@@ -79,17 +122,37 @@ export interface Workstream {
   doneEarlier: number;
 }
 
+/** A role people can take in a project, shown on the project card. */
+export interface ProjectRole {
+  name: string;
+  description: string;
+}
+
+export type ProjectStatus = 'active' | 'planned';
+
 export interface Project {
   id: string;
+  /** "01" … "07" as in the projects document; empty for projects added later. */
+  number: string;
   name: string;
-  description?: string;
-  /** Member id of the project lead (owner). */
-  lead?: string;
+  /** Planned projects have no board yet; members can say they are interested. */
+  status: ProjectStatus;
+  mainArea: AreaId;
+  /** Short labels under the title. */
+  tags: string[];
+  /** One line for the overview card; empty = use the description. */
+  tagline: string;
+  description: string;
+  roles: ProjectRole[];
+  /** Member id of the project lead, or '' when there is none. */
+  lead: string;
+  /** Member ids in the project team (Join / Leave). */
+  members: string[];
+  /** Planned projects only: who said "I'm interested". */
+  interested: string[];
   workstreams: Workstream[];
   /** ISO date the project should be finished by. */
-  deadline?: string | null;
-  /** The kinds of people the project needs, e.g. "Tech", "Marketing". */
-  neededRoles?: string[];
+  deadline: string | null;
 }
 
 /** Where work happened: in the hub (Impact Hub) or remotely. */
@@ -140,6 +203,8 @@ export interface Meeting {
   end: string;
   /** An admin confirmed the attendance list. */
   recorded: boolean;
+  /** Google Meet link from the calendar event, when it has one. */
+  meetUrl?: string;
 }
 
 export interface AttendanceRecord {

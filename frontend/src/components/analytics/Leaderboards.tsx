@@ -1,8 +1,8 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { TEAMBUILDING_SERIES } from '@/lib/data';
-import { meetingPhase } from '@/lib/rules';
+import { entryMinutes, meetingPhase } from '@/lib/rules';
+import { CURRENT_WEEK, weekOf } from '@/lib/time';
 import { Avatar } from '../ui';
 
 interface Row { id: string; value: number; label: string; detail: string }
@@ -11,17 +11,21 @@ interface Row { id: string; value: number; label: string; detail: string }
 const visitsFrom = (hubHours: number) => (hubHours > 0 ? Math.min(5, Math.max(1, Math.round(hubHours / 3))) : 0);
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
-/** Three small leaderboards: hub visits, teambuildings and meetings attended in person. */
+/** Teambuildings are a calendar series like any other; the board shows once the calendar has one. */
+const isTeambuilding = (name: string) => /teambuilding/i.test(name);
+
+/** Small leaderboards: hub visits, teambuildings (when there are any) and meetings attended in person. */
 export function Leaderboards() {
   const { state, me } = useStore();
   const past = state.meetings.filter((m) => meetingPhase(m) === 'past');
+  const teambuilding = new Set(state.series.filter((s) => isTeambuilding(s.name)).map((s) => s.id));
 
   const office: Row[] = state.members.map((m) => {
-    const hubDates = new Set(state.timeEntries.filter((e) => e.memberId === m.id && e.place === 'hub').map((e) => e.date));
+    // Finished weeks come as totals from the server; this week from the time entries we have.
+    const thisWeek = state.timeEntries.filter((e) => e.memberId === m.id && weekOf(e.date) === CURRENT_WEEK);
+    const hubDates = new Set(thisWeek.filter((e) => e.location === 'hub').map((e) => e.date));
     const visits = m.pastWeeksHub.reduce((a, h) => a + visitsFrom(h), 0) + hubDates.size;
-    const thisWeek = state.timeEntries.filter((e) => e.memberId === m.id);
-    const minutes = (place?: string) => thisWeek.filter((e) => !place || e.place === place)
-      .reduce((a, e) => a + (Number(e.end.slice(0, 2)) * 60 + Number(e.end.slice(3))) - (Number(e.start.slice(0, 2)) * 60 + Number(e.start.slice(3))), 0) / 60;
+    const minutes = (location?: 'hub') => thisWeek.filter((e) => !location || e.location === location).reduce((a, e) => a + entryMinutes(e), 0) / 60;
     const total = m.pastWeeks.reduce((a, h) => a + h, 0) + minutes();
     const hub = m.pastWeeksHub.reduce((a, h) => a + h, 0) + minutes('hub');
     return { id: m.id, value: visits, label: `${visits}×`, detail: `${pct(hub, total)} % in the hub` };
@@ -40,9 +44,9 @@ export function Leaderboards() {
     <section className="stack" style={{ gap: 14 }} aria-labelledby="lb-h">
       <h2 id="lb-h">Leaderboards</h2>
       <div className="lb-grid">
-        <Board title="🏢 In the hub" note="Visits in the last 6 weeks" rows={office} me={me.id} />
-        <Board title="🎉 Teambuildings" note="Share of teambuildings joined" rows={share((id) => id === TEAMBUILDING_SERIES)} me={me.id} />
-        <Board title="🤝 Meetings in person" note="Share of meetings attended live" rows={share((id) => id !== TEAMBUILDING_SERIES)} me={me.id} />
+        <Board title="🏢 In the hub" note={`Visits in the last ${state.me.pastWeeks.length + 1} weeks`} rows={office} me={me.id} />
+        {teambuilding.size ? <Board title="🎉 Teambuildings" note="Share of teambuildings joined" rows={share((id) => teambuilding.has(id))} me={me.id} /> : null}
+        <Board title="🤝 Meetings in person" note="Share of meetings attended live" rows={share((id) => !teambuilding.has(id))} me={me.id} />
       </div>
     </section>
   );

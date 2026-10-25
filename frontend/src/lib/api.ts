@@ -3,7 +3,7 @@
  * (next.config.mjs), so the session cookie is first-party. Types come from @hub-pulse/shared.
  */
 import type {
-  AccessMember, AddWorkstreamRequest, AppData, ApiError, BulkAttendanceRequest, CreateAccessMemberRequest, CreateProjectRequest,
+  AccessMember, AddWorkstreamRequest, AppData, AreaId, MemberAreasResponse, ApiError, BulkAttendanceRequest, CreateAccessMemberRequest, CreateProjectRequest,
   AttendanceReportRequest, CalendarSyncStatus, CreateTaskRequest, CreateTimeEntryRequest, LoginResponse, MeetingDetail,
   MemberAnalyticsRow, SessionInfo, SlackRunRequest, SlackStatus, UpdateAccessRequest, Project, SelfAttendanceRequest, Task, TimeEntry,
   TimersResponse, UpdateTaskRequest, UpdateTimeEntryRequest,
@@ -37,7 +37,12 @@ export const api = {
 
   createProject: (body: CreateProjectRequest) => request<Project>('POST', '/projects', body),
   addWorkstream: (projectId: string, body: AddWorkstreamRequest) => request<Project>('POST', `/projects/${encodeURIComponent(projectId)}/workstreams`, body),
+  joinProject: (projectId: string) => request<Project>('POST', `/projects/${encodeURIComponent(projectId)}/members`),
+  leaveProject: (projectId: string) => request<Project>('DELETE', `/projects/${encodeURIComponent(projectId)}/members`),
+  setInterest: (projectId: string, on: boolean) => request<Project>(on ? 'POST' : 'DELETE', `/projects/${encodeURIComponent(projectId)}/interest`),
+  setArea: (areaId: AreaId, on: boolean) => request<MemberAreasResponse>(on ? 'POST' : 'DELETE', `/members/me/areas/${areaId}`),
   createTask: (body: CreateTaskRequest) => request<Task>('POST', '/tasks', body),
+  reorderTasks: (ids: number[]) => request<void>('PUT', '/tasks/order', { ids }),
   updateTask: (id: number, body: UpdateTaskRequest) => request<Task>('PATCH', `/tasks/${id}`, body),
   comment: (id: number, text: string) => request<Task>('POST', `/tasks/${id}/comments`, { text }),
 

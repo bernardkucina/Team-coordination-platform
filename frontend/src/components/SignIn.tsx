@@ -43,8 +43,8 @@ export function SignIn({ onSignIn }: { onSignIn: (email: string, password?: stri
     <div className="signin">
       <form className="card" style={{ width: 'min(420px, 100%)' }} aria-labelledby="signin-h" onSubmit={(e) => void submit(e)} noValidate>
         <div className="brand" style={{ color: 'var(--ink)' }}>
-          <span className="brand-mark">{Icon.pulse}</span>
-          <span><strong>Hub Pulse</strong></span>
+          <span className="brand-mark">{Icon.hub}</span>
+          <span><strong>Shapers Hub</strong></span>
         </div>
         <h1 id="signin-h" style={{ fontSize: 24 }}>Sign in</h1>
         <div className="stack" style={{ gap: 6 }}>

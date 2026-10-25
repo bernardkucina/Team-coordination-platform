@@ -11,10 +11,10 @@ import { useTrackingActions } from './Tracking';
 import { Icon } from './ui';
 
 export const STATUS_LOOK: Record<AttendanceStatus, { label: string; cls: string; solid: string; text: string }> = {
-  present: { label: 'Present', cls: 'good', solid: '#184897', text: '#fff' },
-  remote: { label: 'Remote', cls: 'info', solid: '#3d7ce1', text: '#fff' },
-  excused: { label: 'Excused', cls: 'warn', solid: '#f2b253', text: '#0a133c' },
-  missed: { label: 'Missed', cls: 'bad', solid: '#c22222', text: '#fff' },
+  present: { label: 'Present', cls: 'good', solid: 'var(--hub)', text: '#fff' },
+  remote: { label: 'Remote', cls: 'info', solid: 'var(--blue-mid)', text: '#fff' },
+  excused: { label: 'Excused', cls: 'warn', solid: 'var(--amber)', text: 'var(--ink)' },
+  missed: { label: 'Missed', cls: 'bad', solid: 'var(--red)', text: '#fff' },
 };
 
 const duration = (m: Meeting) => durText(toMin(m.end) - toMin(m.start));
@@ -71,7 +71,7 @@ export function TodayMeetings() {
           const open = openId === m.id;
           const marked = state.attendance.filter((r) => r.meetingId === m.id).length;
           return (
-            <li key={m.id} style={{ borderRadius: 12, border: `1px solid ${live || open ? '#99b3de' : 'var(--line)'}`, background: live ? '#f5f8fd' : '#fff' }}>
+            <li key={m.id} style={{ borderRadius: 12, border: `1px solid ${live || open ? 'var(--ink)' : 'var(--line)'}`, background: live ? 'var(--surface-2)' : '#fff' }}>
               <button
                 type="button" aria-expanded={open} onClick={() => setOpenId(open ? null : m.id)}
                 className="inline" style={{ width: '100%', gap: '12px 16px', padding: 14, border: 0, background: 'transparent', textAlign: 'left', color: 'var(--ink)' }}
@@ -103,12 +103,20 @@ export function TodayMeetings() {
                       {tracking ? (
                         <>
                           <span className="small">You are tracking this meeting since {state.tracking?.at}.</span>
+                          {m.meetUrl && state.tracking?.mode === 'remote' ? (
+                            <a className="btn btn-outline btn-sm" href={m.meetUrl} target="_blank" rel="noreferrer">{Icon.video}Open Meet</a>
+                          ) : null}
                           <button type="button" className="btn btn-primary btn-sm" style={{ minHeight: 40 }} onClick={stop}>Stop and log hours</button>
                         </>
                       ) : live && !state.tracking ? (
                         <>
                           <button type="button" className="btn btn-primary" onClick={() => start(m)}>{Icon.clock}Track time</button>
-                          <button type="button" className="btn btn-outline" onClick={() => start(m, 'remote')}>Joining remotely</button>
+                          {m.meetUrl ? (
+                            // Clocks you in as remote and opens the call from the calendar event.
+                            <a className="btn btn-outline" href={m.meetUrl} target="_blank" rel="noreferrer" onClick={() => start(m, 'remote')}>{Icon.video}Joining remotely</a>
+                          ) : (
+                            <button type="button" className="btn btn-outline" onClick={() => start(m, 'remote')}>Joining remotely</button>
+                          )}
                           <span className="tiny muted">Clocks you in and logs the time when you stop.</span>
                         </>
                       ) : phase === 'upcoming' ? (
@@ -116,7 +124,7 @@ export function TodayMeetings() {
                       ) : rec ? (
                         <span className="small">You were marked <strong>{STATUS_LOOK[rec.status].label.toLowerCase()}</strong>{rec.at ? `, clocked in at ${rec.at}` : ''}.</span>
                       ) : (
-                        <span className="small muted">This meeting has ended. An admin can still mark you.</span>
+                        <span className="small muted">This meeting has ended. Answer “Did you attend?” below, or an admin can mark you.</span>
                       )}
                     </div>
                   ) : null}

@@ -12,7 +12,7 @@ const WHERE_TEXT = { hub: 'in the hub', remote: 'remote' } as const;
 
 export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
   const { state, dispatch, me, isAdmin, flash } = useStore();
-  const [projectId, setProjectId] = useState(state.projects[0].id);
+  const [projectId, setProjectId] = useState(state.projects.filter((p) => p.status === 'active')[0]?.id ?? 'ops');
   // Where the work happens; the brief's leader wants to see time in the hub versus remote.
   const [where, setWhere] = useState<WorkLocation>('hub');
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
@@ -90,31 +90,35 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
       {timer ? (
         <div className="inline" style={{ justifyContent: 'space-between', padding: 14, borderRadius: 12, background: 'var(--navy)', color: '#fff' }}>
           <span className="stack" style={{ gap: 2 }}>
-            <span className="tiny" style={{ color: '#b8c0db' }}>Tracking · {projectName(timer.projectId)}{timer.location ? ` · ${WHERE_TEXT[timer.location]}` : ''} · since {timer.at}</span>
+            <span className="tiny" style={{ color: 'var(--on-dark-muted)' }}>Tracking · {projectName(timer.projectId)}{timer.location ? ` · ${WHERE_TEXT[timer.location]}` : ''} · since {timer.at}</span>
             <span style={{ fontSize: 26, fontWeight: 700 }}>{pad(Math.floor(elapsed / 3600))}:{pad(Math.floor((elapsed % 3600) / 60))}:{pad(elapsed % 60)}</span>
           </span>
           <button type="button" className="btn btn-light" onClick={stopTimer}>Stop and log</button>
         </div>
       ) : (
+        <>
+        <div className="place-toggle">
+          <span className={where === 'hub' ? 'on' : ''} aria-hidden="true">In the hub</span>
+          <button
+            type="button" role="switch" className="switch" aria-checked={where === 'remote'} aria-label="Working remotely"
+            onClick={() => setWhere(where === 'remote' ? 'hub' : 'remote')}
+          ><span /></button>
+          <span className={where === 'remote' ? 'on' : ''} aria-hidden="true">Remote</span>
+        </div>
         <div className="inline" style={{ flexWrap: 'nowrap' }}>
           <label className="sr-only" htmlFor="log-project">Project</label>
-          <select id="log-project" className="field" style={{ flex: '1 1 auto', minWidth: 0, minHeight: 44 }} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-            {state.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          <select id="log-project" className="field select-plain" style={{ flex: '1 1 auto', minWidth: 0, minHeight: 40, fontSize: 14, borderWidth: 1.5, textAlign: 'left', textAlignLast: 'left', textOverflow: 'ellipsis' }} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            {state.projects.filter((p) => p.status === 'active').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <button type="button" className="btn btn-primary" onClick={startTimer}>{Icon.clock}Track time</button>
+          <button type="button" className="btn btn-outline btn-icon btn-thin" onClick={startTimer} aria-label="Track time" title="Track time">{Icon.clock}</button>
         </div>
+        </>
       )}
-      {!timer ? (
-        <div className="seg" role="group" aria-label="Where are you working?" style={{ alignSelf: 'flex-start' }}>
-          <button type="button" aria-pressed={where === 'hub'} onClick={() => setWhere('hub')}>In the hub</button>
-          <button type="button" aria-pressed={where === 'remote'} onClick={() => setWhere('remote')}>Remote</button>
-        </div>
-      ) : null}
-
       {!manualOpen ? (
-        <button type="button" className="btn btn-quiet btn-sm" style={{ alignSelf: 'flex-start', color: 'var(--blue)' }} onClick={() => { setManualOpen(true); setManualError(''); }}>
-          Forgot to track? Add time manually
-        </button>
+        <p className="small muted">
+          Forgot to track?{' '}
+          <button type="button" className="link-btn" onClick={() => { setManualOpen(true); setManualError(''); }}>Add time manually</button>
+        </p>
       ) : (
         <div className="stack" style={{ padding: 14, borderRadius: 12, background: 'var(--surface-2)' }}>
           <div className="inline" style={{ alignItems: 'flex-end' }}>
@@ -159,7 +163,7 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
             const isEditing = editing === e.id;
             const project = projectName(e.projectId);
             return (
-              <li key={e.id} style={{ padding: 10, margin: '0 -10px', borderRadius: 10, background: isNew ? '#f2fbf6' : 'transparent' }}>
+              <li key={e.id} style={{ padding: 10, margin: '0 -10px', borderRadius: 10, background: isNew ? 'var(--good-bg)' : 'transparent' }}>
                 <div className="between" style={{ alignItems: 'flex-start', flexWrap: 'nowrap' }}>
                   <span className="stack" style={{ gap: 3, minWidth: 0 }}>
                     <span className="inline" style={{ gap: 6 }}>
@@ -228,7 +232,7 @@ function RunningMeeting() {
   const meeting = state.meetings.find((m) => m.id === t.meetingId);
   const series = state.series.find((s) => s.id === meeting?.seriesId);
   return (
-    <li style={{ padding: 10, margin: '0 -10px', borderRadius: 10, background: '#f5f8fd' }}>
+    <li style={{ padding: 10, margin: '0 -10px', borderRadius: 10, background: 'var(--surface-2)' }}>
       <div className="between" style={{ flexWrap: 'nowrap' }}>
         <span className="stack" style={{ gap: 3 }}>
           <span className="inline" style={{ gap: 6 }}>

@@ -2,11 +2,12 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import type {
-  AppData, AttendanceRecord, AttendanceStatus, CalendarSyncStatus, HistoryEntry, Meeting, MeetingSeries, Member, Project, Role, Task,
-  TimeEntry, Tracking, UpdateTaskRequest, WorkTimer,
+  AppData, AreaId, AttendanceRecord, AttendanceStatus, CalendarSyncStatus, HistoryEntry, Meeting, MeetingSeries, Member, Project,
+  ProjectRole, Role, Task, TimeEntry, Tracking, UpdateTaskRequest, WorkTimer,
 } from './types';
+import { areaById } from './types';
 import { ApiFailure, api } from './api';
-import { DEMO_TODAY, fromMin, setClock, tickClock, toMin } from './time';
+import { DEMO_TODAY, fromMin, localDate, setClock, tickClock, toMin } from './time';
 import { SignIn } from '@/components/SignIn';
 import { AccessConsole } from '@/components/AccessConsole';
 
@@ -54,22 +55,30 @@ export type Action =
   | { type: 'updateTask'; taskId: number; patch: Partial<Task>; who: string; text: string }
   | { type: 'comment'; taskId: number; who: string; text: string }
   | { type: 'addTask'; task: Omit<Task, 'id'> }
+  /** A task the server already created (shown at once; nothing more to save). */
+  | { type: 'taskCreated'; task: Task }
+  | { type: 'reorderTasks'; ids: number[] }
   | { type: 'startWork'; timer: WorkTimer }
   | { type: 'stopWork'; end: string }
   | { type: 'addProject'; project: NewProject; who: string }
-  | { type: 'addWorkstream'; projectId: string; name: string; lead: string };
+  | { type: 'addArea'; projectId: string; areaId: AreaId; lead: string }
+  | { type: 'joinProject'; projectId: string; memberId: string }
+  | { type: 'leaveProject'; projectId: string; memberId: string }
+  | { type: 'toggleInterest'; projectId: string; memberId: string }
+  | { type: 'toggleArea'; areaId: AreaId; memberId: string };
 
 export interface NewProject {
   name: string;
   description: string;
   lead: string;
-  deadline: string | null;
-  neededRoles: string[];
-  workstreams: string[];
-  tasks: { title: string; workstream: string; owner: string | null; due: string | null }[];
+  mainArea: AreaId;
+  /** Areas that work on the project; they become the board rows. */
+  areas: AreaId[];
+  roles: ProjectRole[];
+  tasks: { title: string; areaId: AreaId; owner: string | null }[];
 }
 
-const WORKSTREAM_COLORS = ['#D9C2F0', '#B8E0D2', '#F5B8D9', '#FFD6A5', '#BDE0FE', '#CDE8A6', '#F7E38A'];
+const toggle = <T extends string>(list: T[], id: T): T[] => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 
 /** Optimistic changes get negative ids until the reload brings the server's. */
 const FIRST_TEMP_ID = -1_000_000;
@@ -79,7 +88,8 @@ const fromData = (data: AppData): Omit<AppState, 'lastEntryId' | 'nextId' | 'toa
   me: data.me,
   members: data.members,
   projects: data.projects,
-  tasks: data.tasks,
+  // The screens count finished tasks per day and week, so keep the local date the task was finished.
+  tasks: data.tasks.map((t) => ({ ...t, doneAt: t.doneAt ? localDate(t.doneAt) : null })),
   series: data.series,
   meetings: data.meetings,
   attendance: data.attendance,
@@ -98,6 +108,13 @@ const withHistory = (task: Task, entry: Omit<HistoryEntry, 'id'>, id: number): T
   ...task,
   history: [{ ...entry, id: `h${id}` }, ...task.history],
 });
+/** Applies a task patch; moving it to Done (or out of Done) sets the finish date the way the server will. */
+const withDoneAt = (task: Task, patch: Partial<Task>): Task => {
+  const next = { ...task, ...patch };
+  if (patch.status && patch.status !== task.status) next.doneAt = patch.status === 'done' ? DEMO_TODAY : null;
+  return next;
+};
+
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'tick':
@@ -184,7 +201,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         nextId: state.nextId + 1,
         tasks: state.tasks.map((t) =>
-          t.id === action.taskId ? withHistory({ ...t, ...action.patch }, { who: action.who, text: action.text, when: 'just now' }, state.nextId) : t,
+          t.id === action.taskId ? withHistory(withDoneAt(t, action.patch), { who: action.who, text: action.text, when: 'just now' }, state.nextId) : t,
         ),
       };
     case 'comment':
@@ -197,6 +214,12 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case 'addTask':
       return { ...state, tasks: [...state.tasks, { ...action.task, id: state.nextId }], nextId: state.nextId + 1 };
+    case 'taskCreated':
+      return { ...state, tasks: [...state.tasks.filter((t) => t.id !== action.task.id), { ...action.task, doneAt: null }] };
+    case 'reorderTasks': {
+      const pos = new Map(action.ids.map((id, i) => [id, i]));
+      return { ...state, tasks: state.tasks.map((t) => (pos.has(t.id) ? { ...t, rank: pos.get(t.id) } : t)) };
+    }
     case 'startWork':
       return { ...state, workTimer: action.timer };
     case 'stopWork': {
@@ -205,45 +228,54 @@ function reducer(state: AppState, action: Action): AppState {
       const id = state.nextId;
       const entry: TimeEntry = {
         id, memberId: w.memberId, projectId: w.projectId, date: DEMO_TODAY, start: w.at,
-        end: fromMin(Math.max(toMin(w.at) + 1, toMin(action.end))), note: '', source: 'manual',
+        end: fromMin(Math.max(toMin(w.at) + 1, toMin(action.end))), note: '', source: 'manual', location: w.location ?? null,
       };
       return { ...state, workTimer: null, timeEntries: [entry, ...state.timeEntries], lastEntryId: id, nextId: id + 1 };
     }
     case 'addProject': {
       const p = action.project;
       const id = `p${state.nextId}`;
-      const names = p.workstreams.length ? p.workstreams : ['General'];
+      const areaIds = Array.from(new Set([p.mainArea, ...p.areas]));
       let nextId = state.nextId + 1;
       const tasks: Task[] = p.tasks.map((t) => ({
-        id: nextId++, projectId: id, title: t.title, workstream: names.includes(t.workstream) ? t.workstream : names[0],
-        status: 'priority', owner: t.owner, helpers: [], priority: 'Medium', startWeek: null, endWeek: null,
-        due: t.due, notes: '', links: [], history: [{ id: `h${nextId}`, who: action.who, text: 'created this task with the project', when: 'just now' }],
+        id: nextId++, projectId: id, title: t.title, workstream: areaById(areaIds.includes(t.areaId) ? t.areaId : p.mainArea).name,
+        status: 'priority', owner: t.owner, helpers: [], priority: 'Medium', startWeek: null, endWeek: null, due: null, doneAt: null,
+        notes: '', links: [], history: [{ id: `h${nextId}`, who: action.who, text: 'created this task with the project', when: 'just now' }],
       }));
-      return {
-        ...state,
-        nextId,
-        projects: [...state.projects, {
-          id, name: p.name, description: p.description, lead: p.lead, deadline: p.deadline, neededRoles: p.neededRoles,
-          workstreams: names.map((name, i) => ({ name, color: WORKSTREAM_COLORS[i % WORKSTREAM_COLORS.length], lead: p.lead, doneEarlier: 0 })),
-        }],
-        tasks: [...state.tasks, ...tasks],
+      const team = Array.from(new Set([p.lead, ...p.tasks.map((t) => t.owner)].filter((x): x is string => !!x)));
+      const project: Project = {
+        id, number: '', name: p.name, status: 'active', mainArea: p.mainArea, tags: [], tagline: '', description: p.description,
+        roles: p.roles, lead: p.lead, members: team, interested: [], deadline: null,
+        workstreams: areaIds.map((a) => ({ name: areaById(a).name, color: areaById(a).color, lead: p.lead, doneEarlier: 0 })),
       };
+      return { ...state, nextId, projects: [...state.projects, project], tasks: [...state.tasks, ...tasks] };
     }
-    case 'addWorkstream':
+    case 'addArea': {
+      const area = areaById(action.areaId);
       return {
         ...state,
         projects: state.projects.map((p) =>
-          p.id === action.projectId
-            ? {
-                ...p,
-                workstreams: [
-                  ...p.workstreams,
-                  { name: action.name, color: WORKSTREAM_COLORS[p.workstreams.length % WORKSTREAM_COLORS.length], lead: action.lead, doneEarlier: 0 },
-                ],
-              }
+          p.id === action.projectId && !p.workstreams.some((w) => w.name === area.name)
+            ? { ...p, workstreams: [...p.workstreams, { name: area.name, color: area.color, lead: action.lead, doneEarlier: 0 }] }
             : p,
         ),
       };
+    }
+    case 'joinProject':
+    case 'leaveProject':
+      return {
+        ...state,
+        projects: state.projects.map((p) =>
+          p.id !== action.projectId ? p
+            : { ...p, members: action.type === 'joinProject' ? Array.from(new Set([...p.members, action.memberId])) : p.members.filter((m) => m !== action.memberId) },
+        ),
+      };
+    case 'toggleInterest':
+      return { ...state, projects: state.projects.map((p) => (p.id === action.projectId ? { ...p, interested: toggle(p.interested, action.memberId) } : p)) };
+    case 'toggleArea': {
+      const flip = (m: Member): Member => (m.id === action.memberId ? { ...m, areas: toggle(m.areas, action.areaId) } : m);
+      return { ...state, members: state.members.map(flip), me: flip(state.me) };
+    }
     default:
       return state;
   }
@@ -274,8 +306,9 @@ const taskPatch = (patch: Partial<Task>): UpdateTaskRequest =>
 /**
  * Saves one action on the backend. Returns the id of a time entry the server created, so it can be highlighted.
  * Actions on things that only exist optimistically (negative ids) are skipped; the reload brings the real ones.
+ * `before` is the state the action was applied to, for toggles that become a POST or a DELETE.
  */
-const persist = async (action: Action): Promise<number | null> => {
+const persist = async (action: Action, before: AppState | null): Promise<number | null> => {
   switch (action.type) {
     case 'logTime': {
       const { projectId, date, start, end, note, location } = action.entry;
@@ -333,17 +366,39 @@ const persist = async (action: Action): Promise<number | null> => {
       });
       return null;
     }
+    case 'reorderTasks': {
+      const ids = action.ids.filter((id) => id > 0);
+      if (ids.length) await api.reorderTasks(ids);
+      return null;
+    }
     case 'addProject': {
       const p = action.project;
       await api.createProject({
-        name: p.name, description: p.description, lead: p.lead || undefined, deadline: p.deadline, neededRoles: p.neededRoles,
-        workstreams: p.workstreams, tasks: p.tasks,
+        name: p.name, description: p.description, lead: p.lead || undefined, mainArea: p.mainArea, areas: p.areas, roles: p.roles,
+        tasks: p.tasks.map((t) => ({ title: t.title, area: t.areaId, owner: t.owner })),
       });
       return null;
     }
-    case 'addWorkstream':
-      await api.addWorkstream(action.projectId, { name: action.name, lead: action.lead });
+    case 'addArea':
+      // A project created a moment ago still has its temporary id (p-1000000); the reload brings the real one.
+      if (!/^p-\d+$/.test(action.projectId)) await api.addWorkstream(action.projectId, { area: action.areaId, lead: action.lead || undefined });
       return null;
+    case 'joinProject':
+      await api.joinProject(action.projectId);
+      return null;
+    case 'leaveProject':
+      await api.leaveProject(action.projectId);
+      return null;
+    case 'toggleInterest': {
+      const was = before?.projects.find((p) => p.id === action.projectId)?.interested.includes(action.memberId) ?? false;
+      await api.setInterest(action.projectId, !was);
+      return null;
+    }
+    case 'toggleArea': {
+      const was = before?.me.areas.includes(action.areaId) ?? false;
+      await api.setArea(action.areaId, !was);
+      return null;
+    }
     default:
       return null;
   }
@@ -378,6 +433,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
   const [loadError, setLoadError] = useState('');
   const [state, rawDispatch] = useReducer(rootReducer, null);
+  /** The latest state, so dispatch can tell persist() what an action changed (e.g. interest on or off). */
+  const stateRef = useRef<AppState | null>(null);
+  stateRef.current = state;
   const queue = useRef<Promise<void>>(Promise.resolve());
   const pending = useRef(0);
   const highlight = useRef<number | null>(null);
@@ -405,6 +463,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const flash = useCallback((text: string) => rawDispatch({ type: 'toast', text }), []);
 
   const dispatch = useCallback((action: Action) => {
+    const before = stateRef.current;
     rawDispatch(action);
     if (action.type === 'toast' || action.type === 'load' || action.type === 'tick') return;
     // Saves run one at a time in order; once nothing is waiting, reload so the screen shows what the server kept.
@@ -412,7 +471,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     pending.current++;
     queue.current = queue.current
       .then(async () => {
-        const entryId = await persist(action);
+        const entryId = await persist(action, before);
         if (entryId !== null) highlight.current = entryId;
       })
       .catch((err: unknown) => {
@@ -497,7 +556,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return (
       <div className="signin">
         <section className="card" style={{ maxWidth: 480 }}>
-          <h1 style={{ fontSize: 22 }}>Hub Pulse cannot reach the server</h1>
+          <h1 style={{ fontSize: 22 }}>Shapers Hub cannot reach the server</h1>
           <p className="small muted">{loadError}</p>
           <button type="button" className="btn btn-primary" onClick={() => { setStatus('loading'); void refresh(); }}>Try again</button>
         </section>
@@ -505,7 +564,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     );
   }
   if (status === 'loading' || !value) {
-    return <div className="signin"><span className="muted">Loading Hub Pulse…</span></div>;
+    return <div className="signin"><span className="muted">Loading Shapers Hub…</span></div>;
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

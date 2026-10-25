@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { TIER_HOURS, type AccessMember, type Role, type Tier } from '@hub-pulse/shared';
 import { api } from '@/lib/api';
-import { Avatar, Icon } from './ui';
+import { Avatar, Icon, Toggle } from './ui';
 
 const TIERS = Object.keys(TIER_HOURS) as Tier[];
 
@@ -71,35 +71,38 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
   const shown = (members ?? []).filter((m) => !q || m.name.toLowerCase().includes(q) || m.email.includes(q));
   const admins = (members ?? []).filter((m) => m.role === 'admin' && m.active).length;
   const inactive = (members ?? []).filter((m) => !m.active).length;
+  const withSlack = (members ?? []).filter((m) => m.slackEmail).length;
 
   return (
     <div className="shell">
-      <nav className="sidebar" aria-label="Main">
-        <div className="brand">
-          <span className="brand-mark">{Icon.pulse}</span>
-          <span><strong>Hub Pulse</strong><small>Access management</small></span>
-        </div>
-        <div className="me">
-          <Avatar initials="SA" />
-          <span>
-            <span className="strong" style={{ fontSize: 14 }}>super admin</span>
-            <small>Manages access only</small>
-            <button type="button" className="signout" onClick={() => void onSignOut()}>Sign out</button>
-          </span>
-        </div>
-      </nav>
-
-      <main className="main">
+      <main className="main access">
         <div className="container">
-          <header className="page-head">
-            <div>
-              <span className="kicker">{members ? `${members.length} people · ${admins} active admins · ${inactive} without access` : 'Loading…'}</span>
-              <h1>Access</h1>
-            </div>
+          {/* The super admin has one screen, so a bar with the brand and sign-out replaces the app menu. */}
+          <div className="access-bar">
+            <span className="brand">
+              <span className="brand-mark">{Icon.hub}</span>
+              <span><strong>Shapers Hub</strong><small>Access management</small></span>
+            </span>
+            <span className="inline" style={{ gap: 10, flexWrap: 'nowrap' }}>
+              <Avatar small initials="SA" />
+              <span className="small strong">super admin</span>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => void onSignOut()}>Sign out</button>
+            </span>
+          </div>
+
+          <header className="stack" style={{ gap: 10 }}>
+            <h1>Access</h1>
+            <p className="small muted" style={{ margin: 0 }}>Who can sign in, who is an admin, and which Slack account gets their reminders.</p>
+            <dl className="stat-strip" aria-label="Access summary" style={{ margin: '4px 0 0' }}>
+              <div><dt>People</dt><dd>{members ? members.length : '…'}</dd></div>
+              <div><dt>Active admins</dt><dd>{members ? admins : '…'}</dd></div>
+              <div><dt>Without access</dt><dd>{members ? inactive : '…'}</dd></div>
+              <div><dt>Slack email set</dt><dd>{members ? `${withSlack} of ${members.length}` : '…'}</dd></div>
+            </dl>
           </header>
 
           {message ? (
-            <p role="status" className="small" style={{ margin: 0, color: message.bad ? 'var(--bad)' : 'var(--good)', fontWeight: 600 }}>{message.text}</p>
+            <p role="status" className={`pill ${message.bad ? 'bad' : 'good'}`} style={{ alignSelf: 'flex-start', margin: 0, fontSize: 14, padding: '6px 14px' }}>{message.text}</p>
           ) : null}
 
           <form className="card" aria-labelledby="add-h" onSubmit={(e) => void add(e)} noValidate>
@@ -119,14 +122,14 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
                   {TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field-group" style={{ flex: '1 1 120px' }}>
-                <label className="label" htmlFor="a-role">Role</label>
-                <select id="a-role" className="field" value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                </select>
+              <div className="field-group" style={{ flex: '1 1 170px' }}>
+                <span className="label">Role</span>
+                <Toggle<Role>
+                  label="Admin" value={draft.role} left={{ value: 'member', label: 'Member' }} right={{ value: 'admin', label: 'Admin' }}
+                  onChange={(role) => setDraft({ ...draft, role })}
+                />
               </div>
-              <button type="submit" className="btn btn-primary" disabled={adding} style={{ minHeight: 40 }}>{adding ? 'Adding…' : 'Add'}</button>
+              <button type="submit" className="btn btn-primary" disabled={adding} style={{ minHeight: 40 }}>{adding ? 'Adding…' : 'Give access'}</button>
             </div>
           </form>
 
@@ -155,27 +158,23 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
                       </td>
                       <td className="small">{m.tier}</td>
                       <td>
-                        <label className="sr-only" htmlFor={`role-${m.id}`}>Role of {m.name}</label>
-                        <select
-                          id={`role-${m.id}`} className="field" value={m.role} disabled={busyId === m.id || !m.active}
-                          onChange={(e) => void change(m, { role: e.target.value as Role }, `${m.name} is now ${e.target.value === 'admin' ? 'an admin' : 'a member'}.`)}
-                        >
-                          <option value="member">Member</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                        <fieldset disabled={busyId === m.id || !m.active} style={{ border: 0, margin: 0, padding: 0 }}>
+                          <Toggle<Role>
+                            label={`${m.name} is an admin`} value={m.role} left={{ value: 'member', label: 'Member' }} right={{ value: 'admin', label: 'Admin' }}
+                            onChange={(role) => { if (role !== m.role) void change(m, { role }, `${m.name} is now ${role === 'admin' ? 'an admin' : 'a member'}.`); }}
+                          />
+                        </fieldset>
                       </td>
                       <td>
                         <SlackEmail member={m} disabled={busyId === m.id} onSave={(email) => void change(m, { slackEmail: email }, email ? `${m.name}'s Slack email saved.` : `${m.name}'s Slack email removed.`)} />
                       </td>
                       <td>
-                        <span className="inline" style={{ gap: 10, flexWrap: 'nowrap' }}>
-                          <span className={`pill ${m.active ? 'good' : 'neutral'}`}>{m.active ? 'Can sign in' : 'No access'}</span>
+                        <span className="place-toggle">
                           <button
-                            type="button" className="btn btn-outline btn-sm" disabled={busyId === m.id}
+                            type="button" role="switch" className="switch" aria-checked={m.active} aria-label={`${m.name} can sign in`} disabled={busyId === m.id}
                             onClick={() => void change(m, { active: !m.active }, m.active ? `${m.name} can no longer sign in.` : `${m.name} can sign in again.`)}
-                          >
-                            {m.active ? 'Remove access' : 'Restore access'}
-                          </button>
+                          ><span /></button>
+                          <span className={`pill ${m.active ? 'good' : 'neutral'}`}>{m.active ? 'Can sign in' : 'No access'}</span>
                         </span>
                       </td>
                     </tr>

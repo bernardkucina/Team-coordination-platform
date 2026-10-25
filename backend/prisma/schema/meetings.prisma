@@ -38,6 +38,8 @@ model Meeting {
   series   MeetingSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
   title    String
   location String        @default("")
+  /// Google Meet link from the event, when it has one.
+  meetUrl  String?
   startsAt DateTime
   endsAt   DateTime
   /// An admin confirmed the attendance list; members without a record then count as missed.

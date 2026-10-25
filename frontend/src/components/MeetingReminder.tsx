@@ -53,7 +53,7 @@ export function MeetingReminder() {
     if (!dueId || !notifySupported() || Notification.permission !== 'granted' || alreadyNotified(dueId)) return;
     markNotified(dueId);
     try {
-      const n = new Notification(title, { body: 'Open Hub Pulse to clock in.', tag: `meeting-${dueId}` });
+      const n = new Notification(title, { body: 'Open Shapers Hub to clock in.', tag: `meeting-${dueId}` });
       n.onclick = () => {
         window.focus();
         n.close();

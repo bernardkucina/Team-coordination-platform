@@ -9,6 +9,8 @@ export interface CalendarEvent {
   summary: string;
   description: string;
   location: string;
+  /** Google Meet link, when the event has one. */
+  meetUrl: string | null;
   categories: string[];
   start: Date;
   end: Date;
@@ -29,6 +31,12 @@ const parseDateTime = (value: string, params: Record<string, string>): Date => {
   return zonedToUtc(`${y}-${mo}-${d}`, `${h}:${mi}`);
 };
 
+const MEET_URL = /https:\/\/meet\.google\.com\/[a-z0-9-]+/i;
+
+/** Google Calendar puts the Meet link in X-GOOGLE-CONFERENCE; older exports only have it in the text. */
+const meetUrlOf = (conference: string | undefined, description: string, location: string): string | null =>
+  (conference && MEET_URL.exec(conference)?.[0]) ?? MEET_URL.exec(description)?.[0] ?? MEET_URL.exec(location)?.[0] ?? null;
+
 export const parseIcs = (text: string): CalendarEvent[] => {
   // Unfold: a line starting with a space or tab continues the previous one.
   const lines = text.replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '').split('\n');
@@ -43,11 +51,14 @@ export const parseIcs = (text: string): CalendarEvent[] => {
     if (line === 'END:VEVENT') {
       if (current?.UID && current.DTSTART) {
         const start = parseDateTime(current.DTSTART.value, current.DTSTART.params);
+        const description = unescapeText(current.DESCRIPTION?.value ?? '');
+        const location = unescapeText(current.LOCATION?.value ?? '');
         events.push({
           uid: current.UID.value.trim(),
           summary: unescapeText(current.SUMMARY?.value ?? ''),
-          description: unescapeText(current.DESCRIPTION?.value ?? ''),
-          location: unescapeText(current.LOCATION?.value ?? ''),
+          description,
+          location,
+          meetUrl: meetUrlOf(current['X-GOOGLE-CONFERENCE']?.value, description, location),
           categories: (current.CATEGORIES?.value ?? '').split(/(?<!\\),/).map((c) => unescapeText(c).trim()).filter(Boolean),
           start,
           end: current.DTEND ? parseDateTime(current.DTEND.value, current.DTEND.params) : start,

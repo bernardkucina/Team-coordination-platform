@@ -8,7 +8,10 @@ import { meetingIdOf, seriesNameOf, type CalendarEvent } from './ics';
 
 export const toMeeting = (m: DbMeeting): Meeting => {
   const start = localParts(m.startsAt);
-  return { id: m.id, seriesId: m.seriesId, date: start.date, start: start.time, end: localParts(m.endsAt).time, recorded: m.recorded };
+  return {
+    id: m.id, seriesId: m.seriesId, date: start.date, start: start.time, end: localParts(m.endsAt).time, recorded: m.recorded,
+    ...(m.meetUrl && { meetUrl: m.meetUrl }),
+  };
 };
 
 export const listSeries = async (): Promise<MeetingSeries[]> => {
@@ -63,7 +66,7 @@ export const importCalendarEvents = async (events: CalendarEvent[]): Promise<{ s
       await db.meetingSeries.upsert({ where: { id: seriesId }, create: { id: seriesId, name: seriesName }, update: { name: seriesName } });
       seriesIds.add(seriesId);
     }
-    const data = { seriesId, title: event.summary, location: event.location, startsAt: event.start, endsAt: event.end };
+    const data = { seriesId, title: event.summary, location: event.location, meetUrl: event.meetUrl, startsAt: event.start, endsAt: event.end };
     await db.meeting.upsert({ where: { uid: event.uid }, create: { id: meetingIdOf(event.uid), uid: event.uid, ...data }, update: data });
     meetings++;
   }

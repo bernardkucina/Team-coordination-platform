@@ -119,7 +119,8 @@ Team-coordination-platform/
 - **Can't come:** possible until the meeting starts, with an optional reason, and can be taken back (`DELETE /api/meetings/:id/attendance/self`).
 - **Did you attend?:** for meetings you didn't clock in to, answerable for 7 days after the meeting ends and only until an admin records you (`POST .../attendance/report`). The answers are in person, online, or not attended. Not attended needs a reason and is stored as `excused`; an admin can still change it.
 - **Hub vs remote:** every time entry and work timer records `location: 'hub' | 'remote'`. Meeting time follows how you joined (in person counts as hub). The hours sheet has no location, so the seed assigns about one day in three remote; imported rows aren't real data.
-- **Projects:** an owner (`lead`), a `deadline`, `neededRoles` (e.g. Tech, Marketing) and due dates for the first tasks.
+- **Projects and areas:** every project has a main area (one of the 7 `AREAS` in `shared/src/domain.ts`) and its board rows are the areas working on it. A project has a lead, a team (`members`), role cards (`roles`), tags and a tagline. Projects are `active` or `planned`; planned ones have no board and take "I'm interested" instead.
+- **Join / Leave:** members join or leave active projects themselves; nobody can leave their last active project (`ops` doesn't count). Members join areas directly too; Strategy and Finance are Core only.
 - **Calendar sync:** `services/meetings/sync.ts` reads `CALENDAR_ICS_URL` (Google Calendar's public iCal address), read only. It updates meetings by UID, adds series members from the `Members:` emails in event descriptions, and removes future meetings that left the calendar and have no attendance. It runs on "Sync now" and on `/api/bootstrap` when the last sync is older than `CALENDAR_SYNC_MINUTES` (default 15). Status: `GET /api/calendar/status`.
 - **Slack (optional extras, `services/slack`):** nothing is sent without `SLACK_BOT_TOKEN`, and a Slack failure never fails a change. Members are found by `Member.slackEmail` (set by the super admin, because the roster emails aren't real), falling back to the roster email; the Slack user id is cached.
   - **Without Slack:** the app itself reminds you while it is open: a banner on every page and a browser notification when your meeting opens for clock-in (`frontend/src/components/MeetingReminder.tsx`).
@@ -130,7 +131,7 @@ Team-coordination-platform/
   - **Admins:** the Slack card on Today runs the jobs on demand.
   - **Setting up the Slack app:** create it from `slack-app-manifest.json`.
   - **Testing without Slack:** set `SLACK_API_URL` to point at a fake server.
-- **Task permissions:** members can edit any task, including handing it to someone else; the history is the safeguard. Only admins create projects. Admins and the project lead can add workstreams.
+- **Task permissions:** members can edit any task, including handing it to someone else; the history is the safeguard. Only admins create projects. Admins and the project lead can add an area (board row) to a project. Anyone can reorder a to-do list (`PUT /api/tasks/order`, not written to the history).
 
 ## Hard constraints
 
@@ -147,8 +148,8 @@ Team-coordination-platform/
   - Member IDs come from the email: `ana.kovac@…` → `ana-kovac`.
   - Meeting IDs are the event UID without its domain: `community-20260914`.
   - Series IDs are slugs: `summer-school`.
-- **Imported hours:** the hours sheet has only weekly totals. The seed spreads each total over Monday–Friday on the member's series projects, or on Hub Operations (`ops`).
-- **Hub Operations (`ops`):** also the fallback project for meeting time. The Community series is hub-wide (`projectId` null).
-- **Sample projects and tasks:** the sandbox has none. The 4 projects and 33 tasks are invented in `backend/src/seed/sample-projects.ts`.
+- **Imported hours:** the hours sheet has only weekly totals. The seed spreads each total over Monday–Friday on the member's active projects, or on Hub Operations (`ops`).
+- **Hub Operations (`ops`):** also the fallback project for meeting time. The frontend hides it from the project overview and board. Shape Talks belongs to p02 and Summer School to p03; the other series are hub-wide (`projectId` null).
+- **Projects and tasks:** the sandbox has none. `backend/src/seed/sample-projects.ts` holds the 7 projects from "PROJEKTI GS za Shapers GO" (p01–p07), the Academy Project, 8 planned projects and 63 tasks, ported from the design prototype.
 - **No weekend meetings.** Use e.g. `DEMO_NOW=2026-10-26T17:55` to demo a live clock-in.
 - **UTF-8:** names contain č, š, ž, so keep files and data in UTF-8.

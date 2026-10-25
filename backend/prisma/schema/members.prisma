@@ -21,6 +21,7 @@ model Member {
   createdAt DateTime @default(now())
 
   sessions Session[]
+  areas    MemberArea[]
 
   // Back-relations from the other services' models.
   projectsLed    Project[]          @relation("ProjectLead")
@@ -34,6 +35,18 @@ model Member {
   series         SeriesMember[]
   attendance     AttendanceRecord[]
   slackMessages  SlackMessage[]
+  projects       ProjectMember[]
+  interests      ProjectInterest[]
+}
+
+/// Areas (oddelki) a member joined directly. areaId is an AreaId from @hub-pulse/shared.
+model MemberArea {
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  areaId    String
+  createdAt DateTime @default(now())
+
+  @@id([memberId, areaId])
 }
 
 /// A signed-in browser: either a member, or the super admin (who is not a member and only manages access).

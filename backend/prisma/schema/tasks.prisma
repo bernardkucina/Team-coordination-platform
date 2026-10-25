@@ -7,15 +7,53 @@ model Project {
   leadId      String?
   lead        Member?  @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
   deadline    DateTime? @db.Date
-  /// The kinds of people the project needs, e.g. "Tech", "Marketing".
-  neededRoles String[] @default([])
+  /// "01" … "07" as in the projects document; empty for projects added later.
+  number      String   @default("")
+  status      ProjectStatus @default(active)
+  /// An AreaId from @hub-pulse/shared (AREAS).
+  mainArea    String   @default("strategy")
+  tags        String[] @default([])
+  /// One line for the overview card; empty = use the description.
+  tagline     String   @default("")
+  /// [{ name, description }]: the roles people can take in the project.
+  roles       Json     @default("[]")
   createdAt   DateTime @default(now())
 
+  members     ProjectMember[]
+  interested  ProjectInterest[]
   workstreams Workstream[]
   tasks       Task[]
   timeEntries TimeEntry[]
   series      MeetingSeries[]
   timers      ActiveTimer[]
+}
+
+enum ProjectStatus {
+  active
+  planned
+}
+
+/// The project team (Join / Leave).
+model ProjectMember {
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([projectId, memberId])
+  @@index([memberId])
+}
+
+/// "I'm interested" in a planned project.
+model ProjectInterest {
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([projectId, memberId])
 }
 
 model Workstream {
@@ -66,6 +104,8 @@ model Task {
   notes       String     @default("")
   /// When the task was last moved to done; cleared when it leaves done.
   doneAt      DateTime?
+  /// Position in the project's to-do list once someone reordered it; null = by id.
+  rank        Int?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 

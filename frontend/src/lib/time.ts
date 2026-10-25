@@ -44,6 +44,9 @@ export const nowHM = (): string => {
 
 const toISO = (d: Date): string => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
+/** A timestamp from the API ("2026-10-23T18:00:00.000Z") as a local date; plain dates pass through. */
+export const localDate = (when: string): string => (when.length <= 10 ? when : toISO(new Date(when)));
+
 const fromISO = (iso: string): Date => {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d);

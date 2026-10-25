@@ -3,7 +3,7 @@
  * The frontend and backend both import these, so a contract change breaks the build, not the demo.
  */
 import type {
-  AttendanceRecord, AttendanceStatus, Meeting, MeetingSeries, Member, Priority, Project, Role, Task, TaskLink,
+  AreaId, AttendanceRecord, AttendanceStatus, Meeting, MeetingSeries, Member, Priority, Project, ProjectRole, Role, Task, TaskLink,
   TaskStatus, Tier, TimeEntry, Tracking, WorkLocation, WorkTimer,
 } from './domain';
 
@@ -112,24 +112,49 @@ export interface AppData {
 
 /* ---------- projects ---------- */
 
-/** POST /api/projects (admin): a project in one step, with its workstreams and first tasks. */
+/**
+ * POST /api/projects (admin): an active project in one step. The board rows are the main area plus `areas`;
+ * the lead and every task owner join the team.
+ */
 export interface CreateProjectRequest {
   name: string;
   description?: string;
-  /** The project owner. */
+  /** The project lead. */
   lead?: string;
+  mainArea: AreaId;
+  /** Areas that work on the project besides the main one. */
+  areas?: AreaId[];
+  roles?: ProjectRole[];
+  tags?: string[];
   /** ISO date. */
   deadline?: string | null;
-  /** Who the project will need, e.g. ["Tech", "Marketing"]. */
-  neededRoles?: string[];
-  workstreams?: string[];
-  tasks?: { title: string; workstream: string; owner: string | null; due?: string | null }[];
+  /** `area` picks the board row; it falls back to the main area. */
+  tasks?: { title: string; area?: AreaId; owner: string | null; due?: string | null }[];
 }
 
-/** POST /api/projects/:id/workstreams (admin or project lead) */
+/**
+ * POST /api/projects/:id/workstreams (admin or project lead): adds an area as a board row.
+ * Send `area` (preferred: the row takes the area's name and colour) or a free `name`.
+ */
 export interface AddWorkstreamRequest {
-  name: string;
+  area?: AreaId;
+  name?: string;
   lead?: string;
+}
+
+/*
+ * Project team and interest (any member, for themselves). Each returns the updated Project.
+ *   POST   /api/projects/:id/members      join an active project
+ *   DELETE /api/projects/:id/members      leave it (refused with 409 when it is your last active project)
+ *   POST   /api/projects/:id/interest     "I'm interested" in a planned project
+ *   DELETE /api/projects/:id/interest     take it back
+ *
+ * Areas (any member, for themselves). Each returns { areas: AreaId[] }; Core-only areas need Shapers Core.
+ *   POST   /api/members/me/areas/:areaId
+ *   DELETE /api/members/me/areas/:areaId
+ */
+export interface MemberAreasResponse {
+  areas: AreaId[];
 }
 
 /* ---------- tasks ---------- */
@@ -156,6 +181,11 @@ export type UpdateTaskRequest = Partial<Omit<CreateTaskRequest, 'links'>> & { li
 /** POST /api/tasks/:id/comments */
 export interface CommentRequest {
   text: string;
+}
+
+/** PUT /api/tasks/order: the new order of a to-do list (rank = index). Not written to the history. Answers 204. */
+export interface ReorderTasksRequest {
+  ids: number[];
 }
 
 /* ---------- hours ---------- */

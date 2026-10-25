@@ -19,6 +19,7 @@ const SAMPLE = [
   'UID:local-1@x',
   'DTSTART;TZID=Europe/Ljubljana:20261026T180000',
   'SUMMARY:Local time',
+  'X-GOOGLE-CONFERENCE:https://meet.google.com/abc-defg-hij',
   'END:VEVENT',
   'END:VCALENDAR',
 ].join('\r\n');
@@ -38,6 +39,16 @@ describe('parseIcs', () => {
     const local = parseIcs(SAMPLE)[1];
     expect(local.start.toISOString()).toBe('2026-10-26T17:00:00.000Z');
     expect(local.end).toEqual(local.start);
+  });
+
+  it('finds the Google Meet link', () => {
+    const [grants, local] = parseIcs(SAMPLE);
+    expect(grants.meetUrl).toBeNull();
+    expect(local.meetUrl).toBe('https://meet.google.com/abc-defg-hij');
+    const [inText] = parseIcs(
+      ['BEGIN:VEVENT', 'UID:x@y', 'DTSTART:20261026T170000Z', 'DESCRIPTION:Join: https://meet.google.com/xyz-abcd-efg (video)', 'END:VEVENT'].join('\n'),
+    );
+    expect(inText.meetUrl).toBe('https://meet.google.com/xyz-abcd-efg');
   });
 
   it('reads the sandbox calendar', () => {

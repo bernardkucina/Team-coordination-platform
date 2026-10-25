@@ -8,9 +8,9 @@ import { CURRENT_WEEK, DEMO_TODAY, shortDate, weekOf } from '@/lib/time';
 import { Icon } from './ui';
 
 const PRIORITY_LOOK: Record<Priority, { bg: string; fg: string; border: string }> = {
-  High: { bg: '#feeaea', fg: '#a11b1b', border: '#f5b5b5' },
-  Medium: { bg: '#fcf0dd', fg: '#7a4c06', border: '#f2d3a0' },
-  Low: { bg: '#f2f4f8', fg: '#4e5675', border: '#dce1ea' },
+  High: { bg: 'var(--bad-bg)', fg: 'var(--ink)', border: 'var(--ink)' },
+  Medium: { bg: 'var(--warn-bg)', fg: 'var(--ink)', border: 'var(--ink)' },
+  Low: { bg: 'var(--line-soft)', fg: 'var(--muted)', border: 'var(--field)' },
 };
 
 /** Open tasks the current user owns that are due this week (or earlier), or in progress. */
@@ -20,10 +20,10 @@ export function MyTasks() {
 
   const tasks = state.tasks
     .filter((t) => t.owner === me.id && t.status !== 'done' && t.status !== 'idea')
-    .filter((t) => t.status === 'progress' || (t.due !== null && weekOf(t.due) <= CURRENT_WEEK + 1))
+    .filter((t) => t.status === 'progress' || t.workstream === 'General task' || (t.due !== null && weekOf(t.due) <= CURRENT_WEEK + 1))
     .sort((a, b) => (a.due ?? '9').localeCompare(b.due ?? '9'));
   const projectCount = new Set(tasks.map((t) => t.projectId)).size;
-  const finishedThisWeek = state.tasks.filter((t) => t.owner === me.id && t.status === 'done' && !!t.doneAt && weekOf(t.doneAt.slice(0, 10)) === CURRENT_WEEK).length;
+  const finishedThisWeek = state.tasks.filter((t) => t.owner === me.id && t.status === 'done' && !!t.doneAt && weekOf(t.doneAt) === CURRENT_WEEK).length;
 
   const update = (id: number, patch: Partial<Task>, text: string) =>
     dispatch({ type: 'updateTask', taskId: id, patch, who: me.name, text });
@@ -54,7 +54,7 @@ export function MyTasks() {
               const late = t.due !== null && t.due < DEMO_TODAY;
               const today = t.due === DEMO_TODAY;
               return (
-                <tr key={t.id}>
+                <tr key={t.id} id={`task-${t.id}`}>
                   <td style={{ padding: '6px 0' }}>
                     <button
                       type="button" className="icon-btn" aria-label={`Finish ${t.title}`}
@@ -67,7 +67,7 @@ export function MyTasks() {
                     <div className="stack" style={{ gap: 4 }}>
                       <span style={{ fontWeight: 600 }}>{t.title}</span>
                       <span className="inline tiny muted" style={{ gap: 6 }}>
-                        <span className="swatch" style={{ background: ws?.color }} />{project?.name} · {t.workstream}
+                        <span className="swatch" style={{ background: ws?.color ?? 'var(--butter)' }} />{project?.name ?? 'Community'} · {t.workstream}
                       </span>
                       {moreOpen === t.id ? (
                         <div className="inline" style={{ marginTop: 6, padding: 10, borderRadius: 8, background: 'var(--surface-2)' }}>
@@ -93,7 +93,7 @@ export function MyTasks() {
                   <td>
                     <label className="sr-only" htmlFor={`prio-${t.id}`}>Priority for {t.title}</label>
                     <select
-                      id={`prio-${t.id}`} className="field" value={t.priority}
+                      id={`prio-${t.id}`} className="field select-plain" value={t.priority}
                       style={{ minHeight: 36, background: look.bg, color: look.fg, borderColor: look.border, fontWeight: 600, fontSize: 13 }}
                       onChange={(e) => update(t.id, { priority: e.target.value as Priority }, `changed priority from ${t.priority} to ${e.target.value}`)}
                     >
@@ -106,7 +106,8 @@ export function MyTasks() {
                     <div className="inline" style={{ flexWrap: 'nowrap' }}>
                       <label className="sr-only" htmlFor={`due-${t.id}`}>Due date for {t.title}</label>
                       <input
-                        id={`due-${t.id}`} type="date" className="field" style={{ minHeight: 36, fontSize: 13 }} value={t.due ?? ''}
+                        id={`due-${t.id}`} type="date" className="date-plain" value={t.due ?? ''}
+                        onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* older browsers: native input still editable */ } }}
                         onChange={(e) => e.target.value && update(t.id, { due: e.target.value, endWeek: weekOf(e.target.value) }, `changed the deadline to ${shortDate(e.target.value)}`)}
                       />
                       {late ? <span className="tiny strong" style={{ color: 'var(--red)' }}>Overdue</span> : null}

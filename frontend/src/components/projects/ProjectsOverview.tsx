@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { AREAS, PROJECT_TAGLINES, areaById } from '@/lib/data';
+import { AREAS, areaById } from '@/lib/types';
 import type { AreaId, Project } from '@/lib/types';
 import { Avatar, Progress } from '../ui';
 
@@ -24,7 +24,8 @@ export function ProjectsOverview({ onOpen }: { onOpen: (projectId: string) => vo
     }
     return [...ids];
   };
-  const activeProjects = state.projects.filter((p) => p.status === 'active');
+  // Hub Operations (ops) only collects time outside projects; it is not a project people join.
+  const activeProjects = state.projects.filter((p) => p.status === 'active' && p.id !== 'ops');
   const plannedProjects = state.projects.filter((p) => p.status === 'planned');
   const myProjects = activeProjects.filter((p) => teamOf(p).includes(me.id));
   const shown = activeProjects
@@ -92,7 +93,7 @@ export function ProjectsOverview({ onOpen }: { onOpen: (projectId: string) => vo
                     {inTeam ? <span className="pill good">You&apos;re in</span> : null}
                   </div>
                   <span className="tiny muted" style={{ lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {PROJECT_TAGLINES[p.id] ?? p.description.split(/(?<=[.!?])\s/)[0]}
+                    {p.tagline || p.description.split(/(?<=[.!?])\s/)[0]}
                   </span>
                 </div>
                 <div className="stack" style={{ gap: 6 }}>

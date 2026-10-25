@@ -29,7 +29,9 @@ npm run build
 - **One owner per task, any number of helpers.**
 - **Meetings come from Google Calendar and are read only.** Never create or edit them. Slack is read only too.
 - **Members log time for today or yesterday only.** Admins can go back 6 days. See `MEMBER_LOG_DAYS_BACK`.
-- **Colors come from the CSS variables in `globals.css`** (Global Shapers palette). Don't hard-code new blues.
+- **Colors come from the CSS variables in `globals.css`** (Nalepke brand kit, see `BRAND.md`). Don't hard-code hex colors in components; use `var(--…)`.
+- **Areas are shared data.** `AREAS`, `areaById` and `areaByName` come from `@hub-pulse/shared` (via `@/lib/types`); a project's board rows are named after its areas.
+- **Hub Operations (`ops`) is not shown as a project.** It only collects time outside projects (hours and meeting time fall back to it), so the overview and the board hide it.
 - **The clock follows the server** (`setClock` in `time.ts`). `DEMO_TODAY`, `CURRENT_WEEK`, `DEMO_NOW` and `WEEK_PACE` are live bindings; read them at render time. To pin the demo to a moment, set `DEMO_NOW` on the backend.
 
 ## Change requests
@@ -38,7 +40,28 @@ Add new requests at the top in the same format. Mark them `[x]` when done and sa
 
 ### 25 Oct 2026
 
+- [x] **The new design (Nalepke) is the app.** The design prototype that lived in `hub-pulse/` (rounds 3 and 4 below plus the "New frontend" commit) was merged into this app with a three-way merge and the folder was deleted. Everything it showed from demo data now comes from the API: areas, project teams (**Join / Leave**), planned projects (**I'm interested**), member areas, task order, hub/remote hours per week and tasks finished per week (`pastWeeksHub`, `pastTasksDone`), Meet links from the calendar (`meetUrl`).
+- [x] **Kept from this app on top of the design:** sign-in, the super admin's Access console (restyled in the new look), "Can't come", "Did you attend?", calendar sync, the Slack card, the reminder banner, the **Drifting away / Superstars** card on admin analytics, and Edit/Delete on logged hours.
+- Not ported: the design's self check-in "I wasn't there" that created a **General task** due in 14 days (the backend stores a missed meeting you report as `excused` with a reason, and has no general-task rule yet), and its placeholder Meet links (only real calendar links are shown).
 - [x] **Meeting reminders without Slack.** `MeetingReminder` (in the root layout, so on every page) shows a banner when one of your meetings opens for clock-in and you have not answered: **Clock in**, **Joining remotely**, **Not now**. With browser notifications allowed (**Turn on** at the bottom of the meetings card) it also notifies once per meeting. Only while the app is open; Slack covers the rest.
+
+### 24 Oct 2026, round 4: analytics (in the design prototype)
+
+What matters, in her words: hours logged, tasks finished, meeting attendance, how much was done remote vs live in the hub, and how I meet the weekly commitment.
+
+- [x] **Hub vs remote is recorded.** Track time and "Add time manually" have an **In the hub / Remote** switch; tracked meetings take it from the clock-in (in person = hub). Every time entry has a `location`.
+- [x] **My analytics** shows the five things: KPIs (hours, weeks at commitment with streak, tasks finished, attendance rate, % in the hub), hours per day, a week-by-week commitment list, and attendance by series with recent meetings.
+- [x] **Admin analytics** got the same lens, plus leaderboards and a **Members** table on Team.
+- [x] **Tasks remember when they were finished** (`doneAt`), so "tasks finished per week" counts real changes.
+
+### 24 Oct 2026, round 3: real project data (in the design prototype)
+
+- [x] **Projects overview from "PROJEKTI GS za Shapers GO".** Projects opens on **Overview**: the 7 running projects as cards (number, main area, tags, description, roles, team, task progress), a filter by area, and **Join / Leave** (you can't leave your last project). **Open board** jumps to that project.
+- [x] **Academy Project stays** as an 8th project next to the 7 from the document.
+- [x] **Board rows are areas.** Each project's rows are the areas working on it. Admins and the project lead can add an area to a project.
+- [x] **Areas section.** The 7 areas with what they do; members can join an area directly. Strategy and Finance are Core-only.
+- [x] **Planned projects** (Inkubator, Hekatoni, Shape Clash, Shape Cast …) with an **I'm interested** button.
+- [x] **New project dialog** asks for main area, the areas that work on it, roles, lead and first tasks.
 
 ### 24 Oct 2026, round 2
 

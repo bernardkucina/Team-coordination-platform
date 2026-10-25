@@ -1,6 +1,7 @@
 import type { TaskEventKind } from '@prisma/client';
-import type {
-  AddWorkstreamRequest, CreateProjectRequest, CreateTaskRequest, Project, Task, UpdateTaskRequest,
+import {
+  areaById, type AddWorkstreamRequest, type AreaId, type CreateProjectRequest, type CreateTaskRequest, type Project, type Task,
+  type UpdateTaskRequest,
 } from '@hub-pulse/shared';
 import { db } from '../../core/db';
 import { now, toDbDate } from '../../core/clock';
@@ -27,23 +28,36 @@ const uniqueProjectId = async (name: string): Promise<string> => {
   return `${base}-${n}`;
 };
 
-/** A project in one step, with its workstreams and first tasks. */
+const loadProject = async (id: string) => {
+  const project = await db.project.findUnique({ where: { id }, include: projectInclude });
+  if (!project) throw notFound('Project');
+  return project;
+};
+
+/**
+ * An active project in one step. Its board rows are the main area plus the other areas that work on it;
+ * the lead and every task owner join the team.
+ */
 export const createProject = async (input: CreateProjectRequest, actor: SessionMember): Promise<Project> => {
-  const names = [...new Set((input.workstreams ?? []).map((w) => w.trim()).filter(Boolean))];
-  const neededRoles = [...new Set((input.neededRoles ?? []).map((r) => r.trim()).filter(Boolean))];
-  const workstreams = names.length ? names : ['General'];
+  const areaIds = [...new Set([input.mainArea, ...(input.areas ?? [])])];
+  const rowOf = (area?: AreaId) => areaById(area && areaIds.includes(area) ? area : input.mainArea).name;
+  const roles = (input.roles ?? []).map((r) => ({ name: r.name.trim(), description: r.description.trim() })).filter((r) => r.name);
+  const tags = [...new Set((input.tags ?? []).map((t) => t.trim()).filter(Boolean))];
   const lead = input.lead || null;
-  await assertMembersExist([lead, ...(input.tasks ?? []).map((t) => t.owner)]);
+  const owners = (input.tasks ?? []).map((t) => t.owner);
+  await assertMembersExist([lead, ...owners]);
+  const team = [...new Set([lead, ...owners].filter((x): x is string => !!x))];
   const id = await uniqueProjectId(input.name);
 
   await db.$transaction(async (tx) => {
     await tx.project.create({
       data: {
         id, name: input.name.trim(), description: input.description?.trim() ?? '', leadId: lead,
-        deadline: input.deadline ? toDbDate(input.deadline) : null, neededRoles,
+        deadline: input.deadline ? toDbDate(input.deadline) : null, mainArea: input.mainArea, roles, tags,
         workstreams: {
-          create: workstreams.map((name, i) => ({ name, color: WORKSTREAM_COLORS[i % WORKSTREAM_COLORS.length], leadId: lead, position: i })),
+          create: areaIds.map((a, i) => ({ name: areaById(a).name, color: areaById(a).color, leadId: lead, position: i })),
         },
+        members: { create: team.map((memberId) => ({ memberId })) },
       },
     });
     for (const t of input.tasks ?? []) {
@@ -51,7 +65,7 @@ export const createProject = async (input: CreateProjectRequest, actor: SessionM
         data: {
           projectId: id,
           title: t.title.trim(),
-          workstream: workstreams.includes(t.workstream) ? t.workstream : workstreams[0],
+          workstream: rowOf(t.area),
           ownerId: t.owner,
           due: t.due ? toDbDate(t.due) : null,
           createdById: actor.id,
@@ -80,22 +94,67 @@ const announceAssignments = async (task: Task, actorId: string, before?: { owner
   }
 };
 
-/** Admins and the project lead can add workstreams. */
+/** Admins and the project lead can add board rows: an area (its name and colour) or a free name. */
 export const addWorkstream = async (projectId: string, input: AddWorkstreamRequest, actor: SessionMember): Promise<Project> => {
-  const project = await db.project.findUnique({ where: { id: projectId }, include: projectInclude });
-  if (!project) throw notFound('Project');
-  if (!actor.isAdmin && project.leadId !== actor.id) throw forbidden('Only admins and the project lead can add workstreams.');
-  const name = input.name.trim();
-  if (project.workstreams.some((w) => w.name === name)) throw conflict(`There is already a workstream called "${name}".`);
+  const project = await loadProject(projectId);
+  if (!actor.isAdmin && project.leadId !== actor.id) throw forbidden('Only admins and the project lead can add areas.');
+  const area = input.area ? areaById(input.area) : undefined;
+  const name = area?.name ?? input.name?.trim() ?? '';
+  if (!name) throw badRequest('Choose an area.');
+  if (project.workstreams.some((w) => w.name === name)) throw conflict(`${name} already works on this project.`);
   const lead = input.lead || actor.id;
   await assertMembersExist([lead]);
   await db.workstream.create({
     data: {
       projectId, name, leadId: lead, position: project.workstreams.length,
-      color: WORKSTREAM_COLORS[project.workstreams.length % WORKSTREAM_COLORS.length],
+      color: area?.color ?? WORKSTREAM_COLORS[project.workstreams.length % WORKSTREAM_COLORS.length],
     },
   });
-  return toProject(await db.project.findUniqueOrThrow({ where: { id: projectId }, include: projectInclude }));
+  return toProject(await loadProject(projectId));
+};
+
+/* ---------- project team and interest (each member for themselves) ---------- */
+
+/** Hub Operations: where meeting time and hub work outside projects is logged. Not a real team. */
+const OPS_PROJECT = 'ops';
+
+export const joinProject = async (projectId: string, actor: SessionMember): Promise<Project> => {
+  const project = await loadProject(projectId);
+  if (project.status !== 'active') throw badRequest('This project has not started yet. Say you are interested instead.');
+  await db.projectMember.upsert({
+    where: { projectId_memberId: { projectId, memberId: actor.id } },
+    create: { projectId, memberId: actor.id },
+    update: {},
+  });
+  return toProject(await loadProject(projectId));
+};
+
+/** Everyone stays in at least one active project, so you can't leave your last one. */
+export const leaveProject = async (projectId: string, actor: SessionMember): Promise<Project> => {
+  await loadProject(projectId);
+  const mine = await db.projectMember.findMany({
+    where: { memberId: actor.id, project: { status: 'active', id: { not: OPS_PROJECT } } },
+    select: { projectId: true },
+  });
+  if (!mine.some((m) => m.projectId === projectId)) return toProject(await loadProject(projectId));
+  if (projectId !== OPS_PROJECT && mine.length <= 1) throw conflict("You can't leave your last project.");
+  await db.projectMember.delete({ where: { projectId_memberId: { projectId, memberId: actor.id } } });
+  return toProject(await loadProject(projectId));
+};
+
+export const setInterest = async (projectId: string, interested: boolean, actor: SessionMember): Promise<Project> => {
+  const project = await loadProject(projectId);
+  if (project.status !== 'planned') throw badRequest('Only planned projects take interest. Join the project instead.');
+  if (interested) {
+    await db.projectInterest.upsert({
+      where: { projectId_memberId: { projectId, memberId: actor.id } },
+      create: { projectId, memberId: actor.id },
+      update: {},
+    });
+  } else {
+    await db.projectInterest.deleteMany({ where: { projectId, memberId: actor.id } });
+  }
+  return toProject(await loadProject(projectId));
 };
 
 const assertWorkstream = async (projectId: string, workstream: string): Promise<void> => {
@@ -115,9 +174,17 @@ export const listTasks = async (filter: { projectId?: string; ownerId?: string }
       ...(filter.ownerId && { OR: [{ ownerId: filter.ownerId }, { helpers: { some: { memberId: filter.ownerId } } }] }),
     },
     include: taskInclude,
-    orderBy: { id: 'asc' },
+    orderBy: [{ rank: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }],
   });
   return tasks.map(toTask);
+};
+
+/** A to-do list in its new order: rank = position. Ordering is not a change to the task, so no history. */
+export const reorderTasks = async (ids: number[]): Promise<void> => {
+  const unique = [...new Set(ids)];
+  const found = await db.task.count({ where: { id: { in: unique } } });
+  if (found !== unique.length) throw badRequest('Unknown task in the new order.');
+  await db.$transaction(unique.map((id, rank) => db.task.update({ where: { id }, data: { rank } })));
 };
 
 const loadTask = async (id: number): Promise<DbTask> => {

@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import type { Project, Task } from '@hub-pulse/shared';
+import { AREA_IDS, type AreaId, type Project, type ProjectRole, type Task } from '@hub-pulse/shared';
 import { fromDbDate } from '../../core/clock';
 
 export const taskInclude = {
@@ -32,20 +32,41 @@ export const toTask = (t: DbTask): Task => ({
     ...(e.comment ? { comment: e.comment } : {}),
   })),
   doneAt: t.doneAt ? t.doneAt.toISOString() : null,
+  rank: t.rank,
 });
 
-export const projectInclude = { workstreams: { orderBy: { position: 'asc' } } } satisfies Prisma.ProjectInclude;
+export const projectInclude = {
+  workstreams: { orderBy: { position: 'asc' } },
+  members: { select: { memberId: true }, orderBy: { createdAt: 'asc' } },
+  interested: { select: { memberId: true }, orderBy: { createdAt: 'asc' } },
+} satisfies Prisma.ProjectInclude;
 
 export type DbProject = Prisma.ProjectGetPayload<{ include: typeof projectInclude }>;
 
+export const isAreaId = (value: string): value is AreaId => (AREA_IDS as string[]).includes(value);
+
+/** roles is stored as JSON; keep only well-formed entries. */
+const rolesOf = (raw: Prisma.JsonValue): ProjectRole[] =>
+  Array.isArray(raw)
+    ? raw.flatMap((r) => (r && typeof r === 'object' && !Array.isArray(r) && typeof r.name === 'string'
+      ? [{ name: r.name, description: typeof r.description === 'string' ? r.description : '' }] : []))
+    : [];
+
 export const toProject = (p: DbProject): Project => ({
   id: p.id,
+  number: p.number,
   name: p.name,
+  status: p.status,
+  mainArea: isAreaId(p.mainArea) ? p.mainArea : 'strategy',
+  tags: p.tags,
+  tagline: p.tagline,
   description: p.description,
-  lead: p.leadId ?? undefined,
+  roles: rolesOf(p.roles),
+  lead: p.leadId ?? '',
+  members: p.members.map((m) => m.memberId),
+  interested: p.interested.map((m) => m.memberId),
   workstreams: p.workstreams.map((w) => ({ name: w.name, color: w.color, lead: w.leadId ?? '', doneEarlier: w.doneEarlier })),
   deadline: p.deadline ? fromDbDate(p.deadline) : null,
-  neededRoles: p.neededRoles,
 });
 
 export const WORKSTREAM_COLORS = ['#D9C2F0', '#B8E0D2', '#F5B8D9', '#FFD6A5', '#BDE0FE', '#CDE8A6', '#F7E38A'];

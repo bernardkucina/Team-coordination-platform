@@ -3,172 +3,214 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { TIER_HOURS } from '@/lib/types';
-import { attendanceStats, entryMinutes, meetingPhase, weekHours } from '@/lib/rules';
-import { CURRENT_WEEK, DEMO_TODAY, addDays, dayLabel, hoursText, shortDate } from '@/lib/time';
+import { attendanceStats, currentMonthDays, dailyHours, isSuperstar, memberWeeks, meetingPhase } from '@/lib/rules';
+import { CURRENT_WEEK, DEMO_TODAY, WEEK_PACE, dateInWeek, dayLabel, hoursText, longDate, shortDate, toMin, weekdayOf } from '@/lib/time';
 import { ColumnChart, Kpi, Progress, Segmented } from '../ui';
+import { Leaderboards } from './Leaderboards';
 import { STATUS_LOOK } from '../Meetings';
 
-type Period = '8w' | 'year' | 'all';
+const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
+const num = (h: number) => String(Math.round(h * 10) / 10).replace('.', ',');
 
-/** First day of each period. */
-const periodStart = (period: Period): string =>
-  period === '8w' ? addDays(DEMO_TODAY, -55) : period === 'year' ? `${DEMO_TODAY.slice(0, 4)}-01-01` : '0000-01-01';
-
+/** A member's own numbers: hours, commitment, tasks, attendance, and hub vs remote. */
 export function MemberAnalytics() {
   const { state, me } = useStore();
-  const [period, setPeriod] = useState<Period>('8w');
+  const [excuseSent, setExcuseSent] = useState<string[]>([]);
+  const [period, setPeriod] = useState<'week' | 'month'>('month');
 
   const commitment = TIER_HOURS[me.tier];
-  const weeks = [...me.pastWeeks, weekHours(state.timeEntries, me.id)];
-  const week = (i: number) => CURRENT_WEEK - me.pastWeeks.length + i;
-  const myEntries = state.timeEntries.filter((e) => e.memberId === me.id);
-  const projectName = (id: string) => state.projects.find((p) => p.id === id)?.name ?? id;
-  const hoursOn = (from: string) => {
-    const byProject = new Map<string, number>();
-    for (const e of myEntries) if (e.date >= from) byProject.set(e.projectId, (byProject.get(e.projectId) ?? 0) + entryMinutes(e) / 60);
-    return [...byProject].map(([id, h]): [string, number] => [projectName(id), h]).sort((a, b) => b[1] - a[1]);
-  };
-  const split = hoursOn(periodStart(period));
-  const total = split.reduce((a, [, h]) => a + h, 0);
-  const top: [string, number] = split[0] ?? ['No hours yet', 0];
-  const firstDate = myEntries.reduce((min, e) => (e.date < min ? e.date : min), DEMO_TODAY);
-  const periodLabel = `since ${shortDate(period === 'all' ? firstDate : periodStart(period))}`;
-  const pct = (h: number) => (total ? Math.round((h / total) * 100) : 0);
-
-  // Tasks I finished in the period, and where my hours were worked (entries without a location are left out).
-  const from = periodStart(period);
-  const finished = state.tasks.filter((t) => t.owner === me.id && t.status === 'done' && !!t.doneAt && t.doneAt.slice(0, 10) >= from).length;
-  const located = myEntries.filter((e) => e.date >= from && e.location);
-  const hubHours = located.filter((e) => e.location === 'hub').reduce((a, e) => a + entryMinutes(e), 0) / 60;
-  const remoteHours = located.filter((e) => e.location === 'remote').reduce((a, e) => a + entryMinutes(e), 0) / 60;
-  const hubShare = hubHours + remoteHours ? Math.round((hubHours / (hubHours + remoteHours)) * 100) : null;
-
-  // Projects I logged time on or own tasks in.
-  const myProjects = state.projects
-    .map((p) => {
-      const entries = myEntries.filter((e) => e.projectId === p.id);
-      const tasks = state.tasks.filter((t) => t.projectId === p.id && (t.owner === me.id || t.helpers.includes(me.id)));
-      const first = entries.reduce((min, e) => (e.date < min ? e.date : min), DEMO_TODAY);
-      return {
-        name: p.name,
-        when: entries.length ? `${shortDate(first)} to now` : 'no hours yet',
-        role: [...new Set(tasks.map((t) => t.workstream))].join(', ') || 'Contributor',
-        hours: Math.round(entries.reduce((a, e) => a + entryMinutes(e), 0) / 60),
-        tasks: tasks.length,
-        active: tasks.some((t) => t.status !== 'done' && t.status !== 'idea') || entries.some((e) => e.date >= addDays(DEMO_TODAY, -28)),
-      };
-    })
-    .filter((p) => p.hours > 0 || p.tasks > 0)
-    .sort((a, b) => b.hours - a.hours);
+  const weeks = memberWeeks(me, state.timeEntries, state.tasks);
+  const current = weeks[weeks.length - 1];
+  const finished = weeks.filter((w) => !w.current);
+  const totalHours = weeks.reduce((a, w) => a + w.hours, 0);
+  const totalHub = weeks.reduce((a, w) => a + w.hub, 0);
+  const totalTasks = weeks.reduce((a, w) => a + w.tasksDone, 0);
+  const metWeeks = finished.filter((w) => w.hours >= commitment).length;
+  let streak = 0;
+  for (let i = finished.length - 1; i >= 0 && finished[i].hours >= commitment; i--) streak++;
+  let bestRun = 0;
+  for (let i = 0, run = 0; i < finished.length; i++) { run = finished[i].hours >= commitment ? run + 1 : 0; bestRun = Math.max(bestRun, run); }
+  const expectedNow = commitment * WEEK_PACE;
+  const perDay = dailyHours(me, state.timeEntries);
+  const monthDays = currentMonthDays();
+  const monthName = longDate(DEMO_TODAY).split(' ').slice(-1)[0];
+  const monthTotal = monthDays.reduce((a, d) => a + (perDay.get(d)?.hub ?? 0) + (perDay.get(d)?.remote ?? 0), 0);
   const stats = attendanceStats(me.id, state.meetings, state.series, state.attendance);
-  const metWeeks = me.pastWeeks.filter((h) => h >= commitment).length;
+
+  const recentlyDone = state.tasks
+    .filter((t) => t.owner === me.id && t.doneAt)
+    .sort((a, b) => (b.doneAt ?? '').localeCompare(a.doneAt ?? ''))
+    .slice(0, 4);
+
+  const seriesRates = state.series
+    .filter((s) => s.invited.includes(me.id))
+    .map((s) => ({ s, st: attendanceStats(me.id, state.meetings.filter((m) => m.seriesId === s.id), state.series, state.attendance) }))
+    .filter(({ st }) => st.invited > 0);
 
   const myMeetings = state.meetings
     .filter((m) => meetingPhase(m) === 'past' && state.series.find((s) => s.id === m.seriesId)?.invited.includes(me.id))
     .map((m) => ({ m, rec: state.attendance.find((r) => r.meetingId === m.id && r.memberId === me.id) }))
     .filter(({ m, rec }) => rec || m.recorded)
     .sort((a, b) => (b.m.date + b.m.start).localeCompare(a.m.date + a.m.start))
-    .slice(0, 8);
+    .slice(0, 6);
 
   return (
     <>
       <header className="page-head">
         <div>
-          <span className="kicker">{me.name}{me.since ? ` · member since ${me.since}` : ` · ${me.tier}`}</span>
-          <h1>My analytics</h1>
+          <span className="kicker">{me.name} · {me.tier} · {commitment} h a week</span>
+          <h1>My pulse</h1>
         </div>
-        <Segmented label="Period" value={period} onChange={setPeriod} options={[{ value: '8w', label: 'Last 8 weeks' }, { value: 'year', label: 'This year' }, { value: 'all', label: 'All time' }]} />
+        <span className="small muted">Last {weeks.length} weeks, from {shortDate(dateInWeek(weeks[0].week, 0))}</span>
       </header>
 
-      <section className="kpis" aria-label="Summary">
-        <Kpi label="Hours logged" value={hoursText(total)} note={`${periodLabel} · most on ${top[0]}`} />
-        <Kpi label="Tasks finished" value={finished} note={periodLabel} />
-        <Kpi label="Meeting attendance" value={stats.rate === null ? '—' : `${stats.rate} %`} note={`${stats.present} in person · ${stats.remote} online`} />
-        <Kpi
-          label="In the hub vs remote" value={hubShare === null ? '—' : `${hubShare} % hub`}
-          note={hubShare === null ? 'no locations logged yet' : `${hoursText(hubHours)} in the hub · ${hoursText(remoteHours)} remote`}
-        />
-        <Kpi label="Weeks at commitment" value={`${metWeeks} of ${me.pastWeeks.length}`} note={`full weeks · ${commitment} h each`} />
-      </section>
-
-      <section className="card" aria-labelledby="wk-h">
-        <div className="between">
-          <h2 id="wk-h">Hours per week</h2>
-          <span className="legend"><span className="dash" />Commitment ({commitment} h)</span>
-        </div>
-        <ColumnChart
-          refValue={commitment}
-          columns={weeks.map((h, i) => {
-            const current = i === weeks.length - 1;
-            return {
-              key: String(i), label: current ? `W${week(i)} now` : `W${week(i)}`, value: h, valueText: String(Math.round(h * 10) / 10).replace('.', ','),
-              tip: `Week ${week(i)}${current ? ', in progress' : ''}: ${hoursText(h)} · ${h >= commitment ? 'commitment met' : `${hoursText(commitment - h)} short`}`,
-              current,
-            };
-          })}
-        />
-      </section>
-
-      <div className="row">
-        <section className="card" aria-labelledby="bp-h" style={{ flex: '1 1 420px', minWidth: 0 }}>
-          <h2 id="bp-h">Where my hours went</h2>
-          {split.map(([name, h]) => (
-            <div key={name} className="stack" style={{ gap: 6 }}>
-              <div className="between small">
-                <span style={{ fontWeight: 600 }}>{name}</span>
-                <span><strong>{hoursText(h)}</strong> · {pct(h)} %</span>
-              </div>
-              <Progress value={h} max={top[1]} large />
-            </div>
-          ))}
-        </section>
-        <section className="card" aria-labelledby="pp-h" style={{ flex: '1 1 420px', minWidth: 0 }}>
-          <h2 id="pp-h">My projects</h2>
-          <ul className="list">
-            {myProjects.map((p) => (
-              <li key={p.name} className="inline" style={{ gap: '8px 12px' }}>
-                <span className="stack" style={{ gap: 2, flex: '1 1 200px', minWidth: 0 }}>
-                  <span style={{ fontWeight: 600 }}>{p.name}</span>
-                  <span className="tiny muted">{p.when} · {p.role}</span>
-                </span>
-                <span className="small"><strong>{p.hours} h</strong> · {p.tasks} tasks</span>
-                <span className={`pill ${p.active ? 'good' : 'neutral'}`}>{p.active ? 'Active' : 'Finished'}</span>
+      <div className="between" style={{ alignItems: 'center', gap: 20 }}>
+        <dl className="stat-strip" aria-label="Summary">
+          <div><dt>Logged</dt><dd>{hoursText(totalHours)}</dd></div>
+          <div><dt>Commitment met</dt><dd>{metWeeks} of {finished.length} weeks</dd></div>
+          <div><dt>Meetings</dt><dd>{stats.rate === null ? '—' : `${stats.rate} %`}</dd></div>
+        </dl>
+        <div className="streak-box" aria-label="Weekly streak">
+          <div className="stack" style={{ gap: 2 }}>
+            <span className="streak-count">🚀 {streak} {streak === 1 ? 'week' : 'weeks'} in a row{streak > 0 ? ' 🔥' : ''}</span>
+            {isSuperstar(current.hours, me) ? <span className="superstar">⭐ Superstar this week</span> : null}
+            <span className="tiny muted">{streak > 0 ? `You met your ${commitment} h every week since W${CURRENT_WEEK - streak}.` : `Best run: ${bestRun} weeks. Hit ${commitment} h this week to start a new one.`}</span>
+          </div>
+          <ol className="streak-weeks">
+            {weeks.map((w) => (
+              <li key={w.week} className={w.current ? 'now' : w.hours >= commitment ? 'met' : 'miss'} title={`W${w.week}: ${hoursText(w.hours)} of ${commitment} h${w.current ? ', in progress' : ''}`}>
+                <span>W{w.week}</span>
               </li>
             ))}
-          </ul>
-        </section>
+          </ol>
+        </div>
       </div>
 
+      <Leaderboards />
+
+      <section className="card" aria-labelledby="hw-h">
+        <div className="between">
+          <div className="inline" style={{ gap: 14 }}>
+            <h2 id="hw-h">{period === 'week' ? 'Hours per week, in the hub and remote' : `Hours per day in ${monthName}: ${hoursText(monthTotal)}`}</h2>
+            <Segmented label="Group hours by" value={period} onChange={setPeriod} options={[{ value: 'week', label: 'Weeks' }, { value: 'month', label: 'Month' }]} />
+          </div>
+          <span className="inline small muted" style={{ gap: 14 }}>
+            <span className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: 'var(--hub)' }} />In the hub</span>
+            <span className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: 'var(--remote)' }} />Remote</span>
+            {period === 'week' ? <span className="legend"><span className="dash" />Commitment ({commitment} h)</span> : null}
+          </span>
+        </div>
+        {period === 'week' ? (
+          <ColumnChart
+          refValue={commitment}
+          columns={weeks.map((w) => ({
+            key: String(w.week),
+            label: w.current ? `W${w.week} now` : `W${w.week}`,
+            value: w.hours,
+            valueText: num(w.hours),
+            current: w.current,
+            parts: [{ value: w.hub, color: 'var(--hub)' }, { value: w.remote, color: 'var(--remote)' }],
+            tip: `Week ${w.week}${w.current ? ', in progress' : ''}: ${hoursText(w.hours)} (${hoursText(w.hub)} hub, ${hoursText(w.remote)} remote)`,
+          }))}
+        />
+        ) : (
+          <ColumnChart
+            columns={monthDays.map((d) => {
+              const v = perDay.get(d) ?? { hub: 0, remote: 0 };
+              const total = v.hub + v.remote;
+              const future = d > DEMO_TODAY;
+              return {
+                key: d,
+                label: String(Number(d.slice(8))),
+                value: total,
+                valueText: total ? num(Math.round(total * 2) / 2) : '',
+                current: d === DEMO_TODAY,
+                parts: [{ value: v.hub, color: 'var(--hub)' }, { value: v.remote, color: 'var(--remote)' }],
+                tip: `${dayLabel(d)}${weekdayOf(d) > 4 ? ' (weekend)' : ''}: ${future ? 'not yet' : total ? `${hoursText(total)} (${hoursText(v.hub)} hub, ${hoursText(v.remote)} remote)` : 'no hours'}`,
+              };
+            })}
+          />
+        )}
+      </section>
+
       <div className="row">
-        <section className="card" aria-labelledby="mt-h" style={{ flex: '3 1 520px', minWidth: 0 }}>
+        <section className="card" aria-labelledby="cm-h" style={{ flex: '1 1 420px', minWidth: 0 }}>
           <div className="between">
-            <h2 id="mt-h">My meetings</h2>
-            <span className="inline small muted" style={{ gap: 14 }}>
-              <span>{stats.present} in person</span><span>{stats.remote} remote</span><span>{stats.excused} excused</span><span>{stats.missed} missed</span>
-            </span>
+            <h2 id="cm-h">Weekly commitment</h2>
+            <span className="small muted">{commitment} h a week</span>
           </div>
           <ul className="list">
-            {myMeetings.map(({ m, rec }) => {
-              const status = rec?.status ?? 'missed';
-              const look = STATUS_LOOK[status];
+            {[...weeks].reverse().map((w) => {
+              const met = w.hours >= commitment;
+              const onPace = w.current && w.hours >= expectedNow;
+              const pill = w.current
+                ? (met ? ['good', 'Met already'] : onPace ? ['info', 'On pace'] : ['bad', `${hoursText(expectedNow - w.hours)} behind pace`])
+                : (met ? ['good', 'Met'] : ['bad', `${hoursText(commitment - w.hours)} short`]);
               return (
-                <li key={m.id} className="inline" style={{ gap: '10px 12px' }}>
-                  <span className="small muted" style={{ width: 96, fontWeight: 600 }}>{dayLabel(m.date)}</span>
-                  <span style={{ flex: '1 1 180px', fontWeight: 600, fontSize: 14 }}>{state.series.find((s) => s.id === m.seriesId)?.name}</span>
-                  <span className={`pill ${look.cls}`}>{status === 'missed' ? 'Missed · not excused' : status === 'excused' ? 'Missed · excused' : look.label}</span>
-                  {rec?.reason ? <span className="tiny muted">&ldquo;{rec.reason}&rdquo;</span> : null}
+                <li key={w.week} className="inline" style={{ gap: '8px 14px', flexWrap: 'nowrap' }}>
+                  <span className="small strong" style={{ width: 92, flex: 'none' }}>
+                    W{w.week}{w.current ? <span className="muted" style={{ fontWeight: 500 }}> now</span> : null}
+                  </span>
+                  <span className="stack" style={{ gap: 4, flex: '1 1 auto', minWidth: 0 }}>
+                    <span className="tiny muted">{hoursText(w.hours)} of {commitment} h</span>
+                    <Progress value={w.hours} max={commitment} color={met ? 'var(--good-dot)' : undefined} />
+                  </span>
+                  <span className={`pill ${pill[0]}`}>{pill[1]}</span>
                 </li>
               );
             })}
           </ul>
+          <span className="tiny muted">This week you are expected to have {hoursText(expectedNow)} by today ({Math.round(WEEK_PACE * 100)} % of the week&apos;s working days).</span>
         </section>
-        <section aria-labelledby="gm-h" className="card" style={{ flex: '2 1 300px', minWidth: 0, border: '2px dashed #a3b6d5', background: 'var(--surface-2)' }}>
-          <span className="pill info" style={{ alignSelf: 'flex-start' }}>After the MVP</span>
-          <h2 id="gm-h" style={{ fontSize: 18 }}>Streaks and recognition</h2>
-          <p className="small" style={{ lineHeight: 1.5, color: 'var(--ink-2)' }}>
-            Reserved for gamification once the core works: weeks in a row at your commitment, on-time clock-ins, and tasks you picked up yourself.
-          </p>
+
+        <section className="card" aria-labelledby="mt-h" style={{ flex: '1 1 420px', minWidth: 0 }}>
+          <div className="between">
+            <h2 id="mt-h">Meeting attendance</h2>
+            <span className="small muted">Excused absences don&apos;t count against you</span>
+          </div>
+          <div className="inline" style={{ gap: 2, height: 14 }} aria-hidden="true">
+            {([['present', stats.present], ['remote', stats.remote], ['excused', stats.excused], ['missed', stats.missed]] as const).map(([k, n]) =>
+              n ? <div key={k} style={{ height: '100%', flex: `${n} 1 0`, background: STATUS_LOOK[k].solid, borderRadius: 3 }} /> : null,
+            )}
+          </div>
+          <div className="inline small" style={{ gap: 16 }}>
+            {([['present', 'in person'], ['remote', 'remote'], ['excused', 'excused'], ['missed', 'missed']] as const).map(([k, label]) => (
+              <span key={k} className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: STATUS_LOOK[k].solid }} /><strong>{stats[k]}</strong> {label}</span>
+            ))}
+          </div>
+          <div className="stack" style={{ gap: 10 }}>
+            <h3>By meeting series</h3>
+            {seriesRates.map(({ s, st }) => (
+              <div key={s.id} className="inline" style={{ gap: 12, flexWrap: 'nowrap' }}>
+                <span className="small" style={{ width: 140, flex: 'none', fontWeight: 600 }}>{s.name}</span>
+                <div style={{ flex: '1 1 auto' }}><Progress value={st.rate ?? 0} max={100} /></div>
+                <span className="small strong" style={{ width: 48, textAlign: 'right' }}>{st.rate === null ? '—' : `${st.rate} %`}</span>
+              </div>
+            ))}
+          </div>
+          <div className="stack" style={{ gap: 4 }}>
+            <h3>Recent meetings</h3>
+            <ul className="list">
+              {myMeetings.map(({ m, rec }) => {
+                const status = rec?.status ?? 'missed';
+                const sent = excuseSent.includes(m.id);
+                return (
+                  <li key={m.id} className="inline" style={{ gap: '8px 12px' }}>
+                    <span className="small muted" style={{ width: 96 }}>{dayLabel(m.date)}</span>
+                    <span style={{ flex: '1 1 160px', fontWeight: 600, fontSize: 14 }}>{state.series.find((s) => s.id === m.seriesId)?.name}</span>
+                    <span className={`pill ${sent ? 'neutral' : STATUS_LOOK[status].cls}`}>
+                      {sent ? 'Reason sent to admin' : status === 'missed' ? 'Missed · not excused' : status === 'excused' ? 'Missed · excused' : STATUS_LOOK[status].label}
+                    </span>
+                    {status === 'missed' && !sent ? (
+                      <button type="button" className="btn btn-quiet btn-sm" style={{ color: 'var(--blue)' }} onClick={() => setExcuseSent([...excuseSent, m.id])}>Add a reason</button>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </section>
+
       </div>
     </>
   );

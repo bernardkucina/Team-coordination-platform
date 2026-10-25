@@ -14,11 +14,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AttendanceStatus } from '@prisma/client';
+import { areaById, type AreaId } from '@hub-pulse/shared';
 import { db } from '../core/db';
 import { addDays, isoWeek, toDbDate, weekdayOf, zonedToUtc } from '../core/clock';
 import { memberIdFromEmail, tierFromRoster } from '../services/members';
 import { importCalendarEvents, parseIcs } from '../services/meetings';
-import { CREATED_TEXT, IDEA_CREATED_TEXT, WORKSTREAM_COLORS, slugify } from '../services/tasks';
+import { CREATED_TEXT, IDEA_CREATED_TEXT, slugify } from '../services/tasks';
 import { readSheet, text, toIsoDate } from './xlsx';
 import { SAMPLE_PROJECTS, SAMPLE_TASKS, type SampleTask } from './sample-projects';
 
@@ -34,6 +35,7 @@ const wipe = async () => {
   // Children first.
   await db.$transaction([
     db.session.deleteMany(),
+    db.slackMessage.deleteMany(),
     db.activeTimer.deleteMany(),
     db.attendanceRecord.deleteMany(),
     db.timeEntry.deleteMany(),
@@ -42,6 +44,9 @@ const wipe = async () => {
     db.taskHelper.deleteMany(),
     db.task.deleteMany(),
     db.workstream.deleteMany(),
+    db.projectMember.deleteMany(),
+    db.projectInterest.deleteMany(),
+    db.memberArea.deleteMany(),
     db.seriesMember.deleteMany(),
     db.meeting.deleteMany(),
     db.meetingSeries.deleteMany(),
@@ -62,6 +67,12 @@ const seedMembers = async () => {
     });
     seriesOf.set(id, text(row.series).split(';').map((s) => s.trim()).filter(Boolean));
   }
+  // Members of the Voice, Tech and Grants series count as members of those areas.
+  const areaOfSeries: Record<string, AreaId> = { 'shapers-voice': 'voice', 'shapers-tech': 'tech', grants: 'money' };
+  const areas = [...seriesOf].flatMap(([memberId, names]) =>
+    names.map((n) => areaOfSeries[slugify(n)]).filter((areaId): areaId is AreaId => !!areaId).map((areaId) => ({ memberId, areaId })),
+  );
+  await db.memberArea.createMany({ data: areas, skipDuplicates: true });
   return seriesOf;
 };
 
@@ -97,12 +108,20 @@ const seedAttendance = async () => {
 };
 
 const seedProjects = async () => {
-  for (const p of SAMPLE_PROJECTS) {
+  // Projects are listed by createdAt, so space them a minute apart in the document's order.
+  const base = zonedToUtc('2026-09-01', '09:00').getTime();
+  for (const [i, p] of SAMPLE_PROJECTS.entries()) {
     await db.project.create({
       data: {
-        id: p.id, name: p.name, description: p.description, leadId: p.lead, createdAt: zonedToUtc(p.created, '09:00'),
-        deadline: p.deadline ? toDbDate(p.deadline) : null, neededRoles: p.neededRoles ?? [],
-        workstreams: { create: p.workstreams.map((name, i) => ({ name, color: WORKSTREAM_COLORS[i % WORKSTREAM_COLORS.length], leadId: p.lead, position: i })) },
+        id: p.id, number: p.number, name: p.name, status: p.status, mainArea: p.mainArea, tags: p.tags, tagline: p.tagline,
+        description: p.description, roles: p.roles.map((r) => ({ ...r })), leadId: p.lead || null, createdAt: new Date(base + i * 60_000),
+        workstreams: {
+          create: p.rows.map((r, position) => ({
+            name: areaById(r.area).name, color: areaById(r.area).color, leadId: r.lead, doneEarlier: r.doneEarlier, position,
+          })),
+        },
+        members: { create: p.members.map((memberId) => ({ memberId })) },
+        interested: { create: p.interested.map((memberId) => ({ memberId })) },
       },
     });
     await db.meetingSeries.updateMany({ where: { id: { in: p.series } }, data: { projectId: p.id } });
@@ -113,7 +132,7 @@ const seedProjects = async () => {
 const eventsFor = (t: SampleTask, lead: string, nameOf: (id: string) => string) => {
   const at = (date: string, time: string) => zonedToUtc(date, time);
   const createdBy = t.createdBy ?? lead;
-  const events: { actorId: string; kind: 'created' | 'updated' | 'picked'; text: string; createdAt: Date }[] = [
+  const events: { actorId: string; kind: 'created' | 'updated' | 'picked' | 'comment'; text: string; comment?: string; createdAt: Date }[] = [
     { actorId: createdBy, kind: 'created', text: t.status === 'idea' ? IDEA_CREATED_TEXT : CREATED_TEXT, createdAt: at(t.created, '10:00') },
   ];
   if (t.owner) {
@@ -130,6 +149,9 @@ const eventsFor = (t: SampleTask, lead: string, nameOf: (id: string) => string) 
     events.push({ actorId: owner, kind: 'updated', text: `moved it to ${STATUS_NAMES.validation}`, createdAt: at(addDays(t.started ?? t.created, 4), '19:00') });
   }
   if (t.done) events.push({ actorId: owner, kind: 'updated', text: `moved it to ${STATUS_NAMES.done}`, createdAt: at(t.done, '20:00') });
+  for (const c of t.comments ?? []) {
+    events.push({ actorId: c.by, kind: 'comment', text: 'commented', comment: c.text, createdAt: at(c.on, '17:30') });
+  }
   return events;
 };
 
@@ -142,7 +164,7 @@ const seedTasks = async () => {
     await db.task.create({
       data: {
         projectId: t.project,
-        workstream: t.workstream,
+        workstream: areaById(t.area).name,
         title: t.title,
         status: t.status,
         ownerId: t.owner ?? null,
@@ -153,7 +175,9 @@ const seedTasks = async () => {
         due: t.due ? toDbDate(t.due) : null,
         doneAt: t.done ? zonedToUtc(t.done, '20:00') : null,
         createdAt: zonedToUtc(t.created, '10:00'),
+        notes: t.notes ?? '',
         helpers: { create: (t.helpers ?? []).map((memberId) => ({ memberId })) },
+        links: { create: (t.links ?? []).map((l, position) => ({ ...l, position })) },
         events: { create: events },
       },
     });
@@ -164,13 +188,11 @@ const seedTasks = async () => {
 /** Spreads each weekly total over Monday–Friday (Saturday too for very long weeks). */
 const seedHours = async () => {
   const rows = await readSheet(resolve(MATERIAL, 'hours.xlsx'));
-  const series = await db.meetingSeries.findMany({ select: { id: true, projectId: true } });
-  const projectOfSeries = new Map(series.map((s) => [s.id, s.projectId]));
-  const memberSeries = await db.seriesMember.findMany();
+  // Each member's hours go to the active projects they are on; Hub Operations for everyone else.
   const projectsOf = new Map<string, string[]>();
-  for (const sm of memberSeries) {
-    const p = projectOfSeries.get(sm.seriesId);
-    if (p && p !== 'ops') projectsOf.set(sm.memberId, [...(projectsOf.get(sm.memberId) ?? []), p]);
+  for (const p of SAMPLE_PROJECTS) {
+    if (p.status !== 'active' || p.id === 'ops') continue;
+    for (const m of p.members) projectsOf.set(m, [...(projectsOf.get(m) ?? []), p.id]);
   }
 
   const data = [];
@@ -181,7 +203,8 @@ const seedHours = async () => {
     const minutes = Math.round(Number(row.hours) * 60);
     if (!minutes) continue;
     const days = minutes / 5 > 15 * 60 ? 6 : 5;
-    const projects = [...(projectsOf.get(memberId) ?? []), 'ops'];
+    const mine = projectsOf.get(memberId) ?? [];
+    const projects = mine.length ? mine : ['ops'];
     let left = minutes;
     for (let d = 0; d < days && left > 0; d++) {
       const chunk = d === days - 1 ? left : Math.round(minutes / days);

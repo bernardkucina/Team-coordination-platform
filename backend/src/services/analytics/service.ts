@@ -23,6 +23,8 @@ interface Context {
   thisWeek: string;
   members: DbMember[];
   hours: Map<string, Map<string, number>>;
+  /** The same, only hours logged in the hub. */
+  hubHours: Map<string, Map<string, number>>;
   meetings: StatsMeeting[];
   invited: Map<string, Set<string>>;
   statusOf: (meetingId: string, memberId: string) => AttendanceRecord['status'] | undefined;
@@ -40,9 +42,10 @@ const loadContext = async (historyWeeks: number): Promise<Context> => {
   const firstWeek = addDays(thisWeek, -7 * Math.max(PAST_WEEKS, historyWeeks));
   const monthStart = zonedToUtc(`${day.slice(0, 7)}-01`);
 
-  const [members, hours, meetingRows, series, records, tasks, initiative, where] = await Promise.all([
+  const [members, hours, hubHours, meetingRows, series, records, tasks, initiative, where] = await Promise.all([
     listMembers({ includeInactive: true }),
     weeklyHours(firstWeek, addDays(thisWeek, 6)),
+    weeklyHours(firstWeek, addDays(thisWeek, 6), 'hub'),
     listMeetingRows(),
     listSeries(),
     listRecords(),
@@ -58,6 +61,7 @@ const loadContext = async (historyWeeks: number): Promise<Context> => {
     thisWeek,
     members,
     hours,
+    hubHours,
     meetings: meetingRows.map((m) => ({ id: m.id, seriesId: m.seriesId, recorded: m.recorded, startsAt: m.startsAt, endsAt: m.endsAt })),
     invited: new Map(series.map((s) => [s.id, new Set(s.invited)])),
     statusOf: (meetingId, memberId) => byKey.get(`${meetingId}|${memberId}`),
@@ -122,11 +126,19 @@ export const memberRows = async (): Promise<MemberAnalyticsRow[]> => {
   return ctx.members.map((m) => rowFor(ctx, m));
 };
 
-/** picked / ideas / pastWeeks for every member, for the Member objects the frontend shows. */
-const statsOf = (ctx: Context, memberId: string): MemberStats => ({
-  ...(ctx.initiative.get(memberId) ?? { picked: 0, ideas: 0 }),
-  pastWeeks: weekStarts(addDays(ctx.thisWeek, -7), PAST_WEEKS).map((w) => roundHours(hoursIn(ctx, memberId, w))),
-});
+/** picked / ideas / past weeks (hours, hub hours, tasks finished) for the Member objects the frontend shows. */
+const statsOf = (ctx: Context, memberId: string): MemberStats => {
+  const weeks = weekStarts(addDays(ctx.thisWeek, -7), PAST_WEEKS);
+  const doneWeeks = ctx.tasks
+    .filter((t) => t.ownerId === memberId && t.status === 'done' && t.doneAt)
+    .map((t) => weekStartOf(localParts(t.doneAt!).date));
+  return {
+    ...(ctx.initiative.get(memberId) ?? { picked: 0, ideas: 0 }),
+    pastWeeks: weeks.map((w) => roundHours(hoursIn(ctx, memberId, w))),
+    pastWeeksHub: weeks.map((w) => roundHours(ctx.hubHours.get(memberId)?.get(w) ?? 0)),
+    pastTasksDone: weeks.map((w) => doneWeeks.filter((d) => d === w).length),
+  };
+};
 
 export const memberStats = async (): Promise<Map<string, MemberStats>> => {
   const ctx = await loadContext(PAST_WEEKS);

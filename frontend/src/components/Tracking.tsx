@@ -46,7 +46,7 @@ export function TrackMeetingButton() {
       onClick={() => live && start(live)}
     >
       {Icon.clock}
-      Track meeting
+      Track time
     </button>
   );
 }
@@ -65,7 +65,7 @@ export function TrackingBanner() {
       <div className="inline" style={{ gap: 14 }}>
         <span style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--good-dot)', boxShadow: '0 0 0 6px rgba(35,191,106,0.25)' }} />
         <span className="stack" style={{ gap: 2 }}>
-          <span className="small" style={{ color: '#b8c0db' }}>Tracking · {t.mode === 'present' ? 'in person' : 'remote'} · clocked in {t.at}</span>
+          <span className="small" style={{ color: 'var(--on-dark-muted)' }}>Tracking · {t.mode === 'present' ? 'in person' : 'remote'} · clocked in {t.at}</span>
           <span style={{ fontSize: 18, fontWeight: 700 }}>{series?.name}</span>
         </span>
       </div>

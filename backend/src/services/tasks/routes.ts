@@ -3,8 +3,10 @@ import { z } from 'zod';
 import { me, requireAdmin } from '../../core/auth';
 import { badRequest } from '../../core/errors';
 import { id, isoDate, parse } from '../../core/validate';
+import { AREA_IDS, type AreaId } from '@hub-pulse/shared';
 import {
-  addWorkstream, commentOnTask, createProject, createTask, getTask, listProjects, listTasks, updateTask,
+  addWorkstream, commentOnTask, createProject, createTask, getTask, joinProject, leaveProject, listProjects, listTasks, reorderTasks,
+  setInterest, updateTask,
 } from './service';
 
 export const tasksRouter = Router();
@@ -14,6 +16,7 @@ const priority = z.enum(['High', 'Medium', 'Low']);
 const week = z.number().int().min(1).max(53).nullable();
 const link = z.object({ label: z.string().trim().min(1).max(200), url: z.url().max(2000) });
 const title = z.string().trim().min(1).max(300);
+const area = z.enum(AREA_IDS as [AreaId, ...AreaId[]]);
 
 /* ---------- projects ---------- */
 
@@ -23,12 +26,14 @@ tasksRouter.get('/projects', async (_req, res) => {
 
 const createProjectSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  description: z.string().max(2000).optional(),
+  description: z.string().max(4000).optional(),
   lead: id.optional(),
+  mainArea: area,
+  areas: z.array(area).max(10).optional(),
+  roles: z.array(z.object({ name: z.string().max(80), description: z.string().max(500) })).max(20).optional(),
+  tags: z.array(z.string().max(80)).max(10).optional(),
   deadline: isoDate.nullable().optional(),
-  neededRoles: z.array(z.string().max(60)).max(20).optional(),
-  workstreams: z.array(z.string().max(80)).max(30).optional(),
-  tasks: z.array(z.object({ title, workstream: z.string(), owner: id.nullable(), due: isoDate.nullable().optional() })).max(100).optional(),
+  tasks: z.array(z.object({ title, area: area.optional(), owner: id.nullable(), due: isoDate.nullable().optional() })).max(100).optional(),
 });
 
 tasksRouter.post('/projects', requireAdmin, async (req, res) => {
@@ -36,8 +41,30 @@ tasksRouter.post('/projects', requireAdmin, async (req, res) => {
 });
 
 tasksRouter.post('/projects/:id/workstreams', async (req, res) => {
-  const body = parse(z.object({ name: z.string().trim().min(1).max(80), lead: id.optional() }), req.body);
+  const body = parse(
+    z.object({ area: area.optional(), name: z.string().trim().min(1).max(80).optional(), lead: id.optional() })
+      .refine((b) => b.area || b.name, 'Choose an area.'),
+    req.body,
+  );
   res.status(201).json(await addWorkstream(String(req.params.id), body, me(req)));
+});
+
+/* Team and interest: each member for themselves. */
+
+tasksRouter.post('/projects/:id/members', async (req, res) => {
+  res.json(await joinProject(String(req.params.id), me(req)));
+});
+
+tasksRouter.delete('/projects/:id/members', async (req, res) => {
+  res.json(await leaveProject(String(req.params.id), me(req)));
+});
+
+tasksRouter.post('/projects/:id/interest', async (req, res) => {
+  res.json(await setInterest(String(req.params.id), true, me(req)));
+});
+
+tasksRouter.delete('/projects/:id/interest', async (req, res) => {
+  res.json(await setInterest(String(req.params.id), false, me(req)));
 });
 
 /* ---------- tasks ---------- */
@@ -51,6 +78,13 @@ const taskId = (raw: unknown): number => {
 tasksRouter.get('/tasks', async (req, res) => {
   const query = parse(z.object({ projectId: id.optional(), mine: z.enum(['true', 'false']).optional() }), req.query);
   res.json(await listTasks({ projectId: query.projectId, ownerId: query.mine === 'true' ? me(req).id : undefined }));
+});
+
+/** Registered before /tasks/:id routes so "order" is never read as a task id. */
+tasksRouter.put('/tasks/order', async (req, res) => {
+  const { ids } = parse(z.object({ ids: z.array(z.number().int().positive()).min(1).max(500) }), req.body);
+  await reorderTasks(ids);
+  res.status(204).end();
 });
 
 tasksRouter.get('/tasks/:id', async (req, res) => {

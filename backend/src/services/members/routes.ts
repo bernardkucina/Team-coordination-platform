@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import type { LoginResponse, SessionInfo } from '@hub-pulse/shared';
+import { AREA_IDS, type AreaId, type LoginResponse, type MemberAreasResponse, type SessionInfo } from '@hub-pulse/shared';
 import { config } from '../../core/config';
 import {
-  endSession, passwordMatches, recordFailure, requireAdmin, startSession, tooManyFailures,
+  endSession, me, passwordMatches, recordFailure, requireAdmin, startSession, tooManyFailures,
 } from '../../core/auth';
 import { HttpError, unauthorized } from '../../core/errors';
 import { parse } from '../../core/validate';
-import { findMemberByEmail, getMember, updateMember } from './service';
+import { findMemberByEmail, getMember, setMemberArea, updateMember } from './service';
 import { toMember } from './mapping';
 
 export const membersRouter = Router();
@@ -75,4 +75,20 @@ membersRouter.patch('/members/:id', requireAdmin, async (req, res) => {
   const id = String(req.params.id);
   await getMember(id);
   res.json(toMember(await updateMember(id, patch)));
+});
+
+/* ---------- areas: each member joins or leaves for themselves ---------- */
+
+const areaParam = z.object({ areaId: z.enum(AREA_IDS as [AreaId, ...AreaId[]]) });
+
+membersRouter.post('/members/me/areas/:areaId', async (req, res) => {
+  const { areaId } = parse(areaParam, req.params);
+  const body: MemberAreasResponse = { areas: await setMemberArea(me(req).id, areaId, true) };
+  res.json(body);
+});
+
+membersRouter.delete('/members/me/areas/:areaId', async (req, res) => {
+  const { areaId } = parse(areaParam, req.params);
+  const body: MemberAreasResponse = { areas: await setMemberArea(me(req).id, areaId, false) };
+  res.json(body);
 });
