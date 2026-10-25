@@ -1,0 +1,24 @@
+// slack service: optional notifications. Nothing here is needed for the core platform to work.
+
+enum SlackMessageKind {
+  /// 10 minutes before the meeting.
+  reminder
+  /// When the meeting ends: "did you attend?"
+  followup
+}
+
+/// A message scheduled with chat.scheduleMessage, so it can be cancelled or moved when things change.
+model SlackMessage {
+  id                 Int              @id @default(autoincrement())
+  kind               SlackMessageKind
+  meetingId          String
+  meeting            Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  memberId           String
+  member             Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  channel            String
+  scheduledMessageId String
+  postAt             DateTime
+  createdAt          DateTime         @default(now())
+
+  @@unique([kind, meetingId, memberId])
+}

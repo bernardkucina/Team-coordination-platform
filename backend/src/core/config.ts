@@ -24,6 +24,22 @@ export const config = {
   calendarIcsUrl: process.env.CALENDAR_ICS_URL || null,
   /** Sync again when the last sync is older than this. */
   calendarSyncMinutes: Number(process.env.CALENDAR_SYNC_MINUTES ?? 15),
+  /**
+   * Slack extras (optional). Without a bot token nothing is ever sent and the platform works the same.
+   * The core platform never depends on Slack.
+   */
+  slack: {
+    botToken: process.env.SLACK_BOT_TOKEN || null,
+    signingSecret: process.env.SLACK_SIGNING_SECRET || null,
+    /** Only for tests against a fake Slack. */
+    apiUrl: process.env.SLACK_API_URL || 'https://slack.com/api',
+  },
+  /** Vercel Cron sends "Authorization: Bearer <CRON_SECRET>" to /api/cron/daily. */
+  cronSecret: process.env.CRON_SECRET || null,
+  /** Public address of the app, for links in Slack messages. */
+  appUrl:
+    process.env.PUBLIC_APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000'),
   /** Serve the built Next.js frontend from this process (one app, one port), as in production. */
   serveFrontend: bool(process.env.SERVE_FRONTEND),
 } as const;

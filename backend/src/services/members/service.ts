@@ -59,3 +59,15 @@ export const setAccess = async (id: string, patch: { isAdmin?: boolean; active?:
   if (patch.active === false) await db.session.deleteMany({ where: { memberId: id } });
   return updated;
 };
+
+/* ---------- Slack account link (used by the slack and access services) ---------- */
+
+export const findMemberBySlackUserId = (slackUserId: string): Promise<DbMember | null> =>
+  db.member.findFirst({ where: { slackUserId, active: true } });
+
+export const setSlackUserId = (id: string, slackUserId: string | null): Promise<DbMember> =>
+  db.member.update({ where: { id }, data: { slackUserId } });
+
+/** Changing the Slack email forgets the old Slack user, so it is looked up again. */
+export const setSlackEmail = (id: string, slackEmail: string | null): Promise<DbMember> =>
+  db.member.update({ where: { id }, data: { slackEmail: slackEmail?.trim().toLowerCase() || null, slackUserId: null } });

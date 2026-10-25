@@ -8,7 +8,7 @@ import type { Member as DbMember } from '@prisma/client';
 import type { AccessMember } from '@hub-pulse/shared';
 import { requireSuperAdmin } from '../../core/auth';
 import { parse } from '../../core/validate';
-import { createMember, listMembers, setAccess, tierFromName, tierName } from '../members';
+import { createMember, listMembers, setAccess, setSlackEmail, tierFromName, tierName } from '../members';
 import { addToHubWideSeries } from '../meetings';
 
 export const accessRouter = Router();
@@ -17,6 +17,7 @@ accessRouter.use('/access', requireSuperAdmin);
 
 const toAccess = (m: DbMember): AccessMember => ({
   id: m.id, name: m.name, email: m.email, tier: tierName(m.tier), role: m.isAdmin ? 'admin' : 'member', active: m.active,
+  slackEmail: m.slackEmail, slackLinked: !!m.slackUserId,
 });
 
 const tier = z.enum(['ShapersGO', 'Shapers Impact', 'Shapers Core']);
@@ -38,10 +39,15 @@ accessRouter.post('/access/members', async (req, res) => {
 });
 
 accessRouter.patch('/access/members/:id', async (req, res) => {
-  const body = parse(z.object({ role: role.optional(), active: z.boolean().optional() }).strict(), req.body);
-  const member = await setAccess(String(req.params.id), {
+  const body = parse(
+    z.object({ role: role.optional(), active: z.boolean().optional(), slackEmail: z.union([z.email(), z.literal('')]).optional() }).strict(),
+    req.body,
+  );
+  const id = String(req.params.id);
+  let member = await setAccess(id, {
     ...(body.role && { isAdmin: body.role === 'admin' }),
     ...(body.active !== undefined && { active: body.active }),
   });
+  if (body.slackEmail !== undefined) member = await setSlackEmail(id, body.slackEmail || null);
   res.json(toAccess(member));
 });

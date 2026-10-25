@@ -14,6 +14,10 @@ model Member {
   isAdmin  Boolean   @default(false)
   active   Boolean   @default(true)
   joinedOn DateTime? @db.Date
+  /// Email of the member's Slack account (the roster emails are not real). Set by the super admin.
+  slackEmail  String?
+  /// Found with users.lookupByEmail and cached.
+  slackUserId String?
   createdAt DateTime @default(now())
 
   sessions Session[]
@@ -29,6 +33,7 @@ model Member {
   timers         ActiveTimer[]
   series         SeriesMember[]
   attendance     AttendanceRecord[]
+  slackMessages  SlackMessage[]
 }
 
 /// A signed-in browser: either a member, or the super admin (who is not a member and only manages access).

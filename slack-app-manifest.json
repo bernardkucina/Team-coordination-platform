@@ -1,0 +1,32 @@
+{
+  "display_information": {
+    "name": "Hub Pulse",
+    "description": "Meeting reminders, attendance check-ins and hour summaries for the hub.",
+    "background_color": "#184897"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Hub Pulse",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "chat:write",
+        "im:write",
+        "users:read",
+        "users:read.email"
+      ]
+    }
+  },
+  "settings": {
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://hub-pulse-orcin.vercel.app/api/slack/interactions"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

@@ -5,7 +5,7 @@
 import type {
   AccessMember, AddWorkstreamRequest, AppData, ApiError, BulkAttendanceRequest, CreateAccessMemberRequest, CreateProjectRequest,
   AttendanceReportRequest, CalendarSyncStatus, CreateTaskRequest, CreateTimeEntryRequest, LoginResponse, MeetingDetail,
-  MemberAnalyticsRow, SessionInfo, UpdateAccessRequest, Project, SelfAttendanceRequest, Task, TimeEntry,
+  MemberAnalyticsRow, SessionInfo, SlackRunRequest, SlackStatus, UpdateAccessRequest, Project, SelfAttendanceRequest, Task, TimeEntry,
   TimersResponse, UpdateTaskRequest, UpdateTimeEntryRequest,
 } from '@hub-pulse/shared';
 
@@ -54,6 +54,8 @@ export const api = {
   unmarkSelf: (meetingId: string) => request<void>('DELETE', `/meetings/${encodeURIComponent(meetingId)}/attendance/self`),
   reportAttendance: (meetingId: string, body: AttendanceReportRequest) => request<unknown>('POST', `/meetings/${encodeURIComponent(meetingId)}/attendance/report`, body),
   syncCalendar: () => request<CalendarSyncStatus>('POST', '/calendar/sync'),
+  slackStatus: () => request<SlackStatus>('GET', '/slack/status'),
+  slackRun: (job: SlackRunRequest['job']) => request<Record<string, unknown>>('POST', '/slack/run', { job }),
   memberAnalytics: () => request<MemberAnalyticsRow[]>('GET', '/analytics/members'),
   recordMeeting: (meetingId: string, body: BulkAttendanceRequest) => request<MeetingDetail>('PUT', `/meetings/${encodeURIComponent(meetingId)}/attendance`, body),
   accessMembers: () => request<AccessMember[]>('GET', '/access/members'),

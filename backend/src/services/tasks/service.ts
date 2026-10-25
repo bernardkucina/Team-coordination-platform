@@ -7,6 +7,7 @@ import { now, toDbDate } from '../../core/clock';
 import { badRequest, conflict, forbidden, notFound } from '../../core/errors';
 import type { SessionMember } from '../../core/auth';
 import { assertMembersExist } from '../members';
+import { emit } from '../../core/events';
 import {
   CREATED_TEXT, CREATED_WITH_PROJECT_TEXT, IDEA_CREATED_TEXT, describeChanges, joinParts, type TaskFields,
 } from './history';
@@ -60,7 +61,23 @@ export const createProject = async (input: CreateProjectRequest, actor: SessionM
     }
   });
 
+  if (lead && lead !== actor.id) await emit('project.memberAdded', { memberId: lead, actorId: actor.id, projectId: id, role: 'lead' });
+  for (const t of input.tasks ?? []) {
+    if (t.owner && t.owner !== actor.id) await emit('project.memberAdded', { memberId: t.owner, actorId: actor.id, projectId: id, role: 'owner' });
+  }
   return toProject(await db.project.findUniqueOrThrow({ where: { id }, include: projectInclude }));
+};
+
+/** Tells people someone else added them to a task. */
+const announceAssignments = async (task: Task, actorId: string, before?: { owner: string | null; helpers: string[] }) => {
+  if (task.owner && task.owner !== actorId && task.owner !== before?.owner) {
+    await emit('project.memberAdded', { memberId: task.owner, actorId, projectId: task.projectId, taskId: task.id, role: 'owner' });
+  }
+  for (const h of task.helpers) {
+    if (h !== actorId && !before?.helpers.includes(h)) {
+      await emit('project.memberAdded', { memberId: h, actorId, projectId: task.projectId, taskId: task.id, role: 'helper' });
+    }
+  }
 };
 
 /** Admins and the project lead can add workstreams. */
@@ -137,7 +154,9 @@ export const createTask = async (input: CreateTaskRequest, actor: SessionMember)
     },
     include: taskInclude,
   });
-  return toTask(task);
+  const created = toTask(task);
+  await announceAssignments(created, actor.id);
+  return created;
 };
 
 const fieldsOf = (t: Task): TaskFields => ({
@@ -195,7 +214,9 @@ export const updateTask = async (id: number, patch: UpdateTaskRequest, actor: Se
     },
     include: taskInclude,
   });
-  return toTask(task);
+  const updated = toTask(task);
+  await announceAssignments(updated, actor.id, { owner: before.owner, helpers: before.helpers });
+  return updated;
 };
 
 export const commentOnTask = async (id: number, text: string, actor: SessionMember): Promise<Task> => {

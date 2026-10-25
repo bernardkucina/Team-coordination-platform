@@ -14,10 +14,12 @@ import { meetingsRouter } from './services/meetings';
 import { attendanceRouter } from './services/attendance';
 import { hoursRouter } from './services/hours';
 import { analyticsRouter } from './services/analytics';
+import { registerSlackListeners, slackRouter } from './services/slack';
 import { gatewayRouter } from './gateway/routes';
 
 /** @param frontend Handles every non-API request (the Next.js app) when the frontend is served from here. */
 export const createApp = (frontend?: RequestHandler) => {
+  registerSlackListeners();
   const app = express();
   app.disable('x-powered-by');
 
@@ -32,6 +34,8 @@ export const createApp = (frontend?: RequestHandler) => {
   // Sign-in and the super admin's access routes check their own permissions.
   api.use(membersRouter);
   api.use(accessRouter);
+  // Slack button clicks (signed by Slack), the daily cron (CRON_SECRET) and admin Slack tools (requireAdmin).
+  api.use(slackRouter);
   // Everything after this needs a signed-in member.
   api.use(requireAuth);
   api.use(gatewayRouter);

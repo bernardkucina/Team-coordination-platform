@@ -5,6 +5,7 @@ import { CURRENT_WEEK, DEMO_TODAY, longDate } from '@/lib/time';
 import { HoursCard } from '@/components/HoursCard';
 import { DidYouAttend, PlannedMeetings, TodayMeetings } from '@/components/Meetings';
 import { MyTasks } from '@/components/MyTasks';
+import { SlackCard } from '@/components/SlackCard';
 import { TrackMeetingButton, TrackingBanner } from '@/components/Tracking';
 
 export default function TodayPage() {
@@ -29,7 +30,7 @@ export default function TodayPage() {
         </div>
         <div className="col-side">
           <HoursCard title={isAdmin ? 'My hours this week' : 'Hours this week'} />
-          {isAdmin ? <PlannedMeetings /> : null}
+          {isAdmin ? <><PlannedMeetings /><SlackCard /></> : null}
         </div>
       </div>
     </>

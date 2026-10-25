@@ -6,6 +6,7 @@ import type { CalendarSyncStatus } from '@hub-pulse/shared';
 import { db } from '../../core/db';
 import { config } from '../../core/config';
 import { now } from '../../core/clock';
+import { emit } from '../../core/events';
 import { listMembers } from '../members';
 import { slugify } from '../tasks';
 import { memberEmailsOf, parseIcs, seriesNameOf } from './ics';
@@ -64,6 +65,7 @@ const runSync = async (): Promise<CalendarSyncStatus> => {
       create: { id: SYNC_ID, syncedAt: new Date(), result, error: null },
       update: { syncedAt: new Date(), result, error: null },
     });
+    await emit('calendar.synced', {});
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     await db.calendarSync.upsert({ where: { id: SYNC_ID }, create: { id: SYNC_ID, error }, update: { error } });

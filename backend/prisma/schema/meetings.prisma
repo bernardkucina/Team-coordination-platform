@@ -45,6 +45,7 @@ model Meeting {
 
   attendance AttendanceRecord[]
   timers     ActiveTimer[]
+  slack      SlackMessage[]
 
   @@index([startsAt])
 }

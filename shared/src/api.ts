@@ -52,6 +52,10 @@ export interface AccessMember {
   tier: Tier;
   role: Role;
   active: boolean;
+  /** Email of their Slack account, when it differs from the roster email. */
+  slackEmail: string | null;
+  /** Their Slack account was found. */
+  slackLinked: boolean;
 }
 
 /** POST /api/access/members: give a new person access. */
@@ -66,6 +70,24 @@ export interface CreateAccessMemberRequest {
 export interface UpdateAccessRequest {
   role?: Role;
   active?: boolean;
+  /** Empty string clears it. */
+  slackEmail?: string;
+}
+
+/** GET /api/slack/status (admin) */
+export interface SlackStatus {
+  /** SLACK_BOT_TOKEN is set. */
+  configured: boolean;
+  /** SLACK_SIGNING_SECRET is set, so buttons in Slack work. */
+  interactive: boolean;
+  /** Members whose Slack account was found. */
+  linked: number;
+  members: number;
+}
+
+/** POST /api/slack/run (admin): run a Slack job now. */
+export interface SlackRunRequest {
+  job: 'meetings' | 'daily' | 'monthly';
 }
 
 /** GET /api/bootstrap: everything the frontend store needs on load. */

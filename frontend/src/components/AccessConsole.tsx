@@ -33,7 +33,7 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
     void load();
   }, []);
 
-  const change = async (m: AccessMember, patch: { role?: Role; active?: boolean }, done: string) => {
+  const change = async (m: AccessMember, patch: { role?: Role; active?: boolean; slackEmail?: string }, done: string) => {
     setBusyId(m.id);
     setMessage(null);
     try {
@@ -137,9 +137,9 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
               <input id="a-filter" className="field" placeholder="Search name or email" value={filter} onChange={(e) => setFilter(e.target.value)} style={{ width: 240 }} />
             </div>
             <div className="scroll-x">
-              <table className="table" style={{ minWidth: 640 }}>
+              <table className="table" style={{ minWidth: 860 }}>
                 <thead>
-                  <tr><th>Person</th><th>Tier</th><th>Role</th><th>Access</th></tr>
+                  <tr><th>Person</th><th>Tier</th><th>Role</th><th>Slack</th><th>Access</th></tr>
                 </thead>
                 <tbody>
                   {shown.map((m) => (
@@ -165,6 +165,9 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
                         </select>
                       </td>
                       <td>
+                        <SlackEmail member={m} disabled={busyId === m.id} onSave={(email) => void change(m, { slackEmail: email }, email ? `${m.name}'s Slack email saved.` : `${m.name}'s Slack email removed.`)} />
+                      </td>
+                      <td>
                         <span className="inline" style={{ gap: 10, flexWrap: 'nowrap' }}>
                           <span className={`pill ${m.active ? 'good' : 'neutral'}`}>{m.active ? 'Can sign in' : 'No access'}</span>
                           <button
@@ -184,5 +187,27 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
         </div>
       </main>
     </div>
+  );
+}
+
+/**
+ * The email of someone's Slack account (the roster emails are made up). Saved on Enter or when leaving the field.
+ * "Linked" appears once Slack has found the account, which happens when the first message is sent.
+ */
+function SlackEmail({ member, disabled, onSave }: { member: AccessMember; disabled: boolean; onSave: (email: string) => void }) {
+  const [value, setValue] = useState(member.slackEmail ?? '');
+  useEffect(() => setValue(member.slackEmail ?? ''), [member.slackEmail]);
+  const save = () => {
+    if (value.trim() !== (member.slackEmail ?? '')) onSave(value.trim());
+  };
+  return (
+    <span className="inline" style={{ gap: 6, flexWrap: 'nowrap' }}>
+      <label className="sr-only" htmlFor={`slack-${member.id}`}>Slack email of {member.name}</label>
+      <input
+        id={`slack-${member.id}`} className="field" type="email" style={{ width: 210, fontSize: 13 }} placeholder="Slack email" value={value}
+        disabled={disabled} onChange={(e) => setValue(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === 'Enter' && save()}
+      />
+      {member.slackLinked ? <span className="pill good">Linked</span> : null}
+    </span>
   );
 }

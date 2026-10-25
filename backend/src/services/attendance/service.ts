@@ -6,6 +6,7 @@ import { badRequest, forbidden } from '../../core/errors';
 import type { SessionMember } from '../../core/auth';
 import { getMeetingRow, getSeries, isInvited, setRecorded, toMeeting } from '../meetings';
 import { canClockIn, canExcuse, canReport } from './rules';
+import { emit } from '../../core/events';
 
 export const toRecord = (r: DbRecord): AttendanceRecord => ({
   meetingId: r.meetingId,
@@ -49,6 +50,7 @@ export const markSelf = async (
     create: { meetingId, memberId: member.id, status, source: 'self', clockedInAt, reason: why },
     update: { status, source: 'self', clockedInAt, reason: why },
   });
+  await emit('attendance.self', { meetingId, memberId: member.id, status });
   return toRecord(record);
 };
 
@@ -57,6 +59,7 @@ export const unmarkSelf = async (meetingId: string, member: SessionMember): Prom
   const meeting = await getMeetingRow(meetingId);
   if (!canExcuse(meeting, now())) throw badRequest('The meeting has started; ask an admin to change your attendance.');
   await db.attendanceRecord.deleteMany({ where: { meetingId, memberId: member.id, source: 'self', status: 'excused' } });
+  await emit('attendance.self', { meetingId, memberId: member.id, status: 'cleared' });
 };
 
 /**
@@ -79,6 +82,7 @@ export const reportAttendance = async (
     create: { meetingId, memberId: member.id, status, source: 'self', reason: answer === 'absent' ? why : null },
     update: { status, source: 'self', reason: answer === 'absent' ? why : null },
   });
+  await emit('attendance.self', { meetingId, memberId: member.id, status });
   return toRecord(record);
 };
 
