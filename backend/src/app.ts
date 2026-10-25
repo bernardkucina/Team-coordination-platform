@@ -19,6 +19,7 @@ import { gatewayRouter } from './gateway/routes';
 import { seedTeambuildings } from './seed/teambuildings';
 import { seedDemoTasks } from './seed/demo-tasks';
 import { seedGeneralTasks } from './seed/general-tasks';
+import { seedGeneralHistory } from './seed/general-history';
 
 /**
  * Made-up sandbox data that is not in /material (teambuildings, open tasks for this week) is written to the database once per process,
@@ -34,6 +35,8 @@ const ensureDemoData = () =>
       if (tasks) console.log(`Demo data: added ${tasks} open tasks for this week`);
       const general = await seedGeneralTasks();
       if (general.tasks || general.duties) console.log(`Demo data: added ${general.tasks} General tasks, ${general.duties} make-up duties`);
+      const history = await seedGeneralHistory();
+      if (history) console.log(`Demo data: added ${history} finished General tasks (history)`);
     } catch (err) {
       console.warn('Demo data: could not add it', err);
     }
