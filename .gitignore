@@ -37,3 +37,7 @@ skills-lock.json
 # Hackathon logistics from the organisers, not used by the app
 material/Mentor slots*
 material/SCHEDULE.docx
+
+# Notes and docs stay local; only READMEs go to GitHub
+*.md
+!README.md
