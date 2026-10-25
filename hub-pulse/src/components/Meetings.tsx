@@ -4,9 +4,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { meetingPhase } from '@/lib/rules';
-import { DEMO_TODAY, addDays, dayLabel, durText, toMin } from '@/lib/time';
+import { CURRENT_WEEK, DEMO_TODAY, addDays, dayLabel, durText, shortDate, toMin, weekOf } from '@/lib/time';
 import type { AttendanceStatus, Meeting } from '@/lib/types';
-import { useTrackingActions } from './Tracking';
 import { Icon } from './ui';
 
 export const STATUS_LOOK: Record<AttendanceStatus, { label: string; cls: string; solid: string; text: string }> = {
@@ -18,13 +17,60 @@ export const STATUS_LOOK: Record<AttendanceStatus, { label: string; cls: string;
 
 const duration = (m: Meeting) => durText(toMin(m.end) - toMin(m.start));
 
+/** The Calendar event's Meet link. Sandbox events have none, so the demo makes a stable placeholder per series. */
+export const meetLink = (m: Meeting): string => {
+  if (m.meetUrl) return m.meetUrl;
+  let h = 0;
+  for (const ch of m.seriesId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const abc = 'abcdefghijkmnopqrstuvwxyz';
+  const code = Array.from({ length: 10 }, (_, i) => abc[((h >>> (i * 3)) + i * 7) % abc.length]).join('');
+  return `https://meet.google.com/${code.slice(0, 3)}-${code.slice(3, 7)}-${code.slice(7)}`;
+};
+
+/** Self check-in after a meeting: how you took part. */
+const SELF_OPTIONS: { status: AttendanceStatus; label: string }[] = [
+  { status: 'present', label: 'In the office' },
+  { status: 'remote', label: 'Online' },
+  { status: 'missed', label: "I wasn't there" },
+];
+
+/** Missing a meeting means one general task within 14 days, plus reading the minutes. */
+const GENERAL_TASK = 'General task';
+const GENERAL_TASK_DAYS = 14;
+
 /**
  * Today's meetings from Google Calendar. Click a meeting to open it: track your time there,
  * and as an admin record everyone's attendance in the same place.
  */
 export function TodayMeetings() {
-  const { state, me, isAdmin } = useStore();
-  const { start, stop } = useTrackingActions();
+  const { state, dispatch, me, isAdmin, flash } = useStore();
+  const [changing, setChanging] = useState<string | null>(null);
+  const generalTaskFor = (m: Meeting) =>
+    state.tasks.find((t) => t.owner === me.id && t.workstream === GENERAL_TASK && t.notes.includes(`meeting:${m.id}`));
+  const checkIn = (m: Meeting, status: AttendanceStatus) => {
+    const series = state.series.find((s) => s.id === m.seriesId);
+    dispatch({ type: 'setAttendance', meetingId: m.id, memberId: me.id, status, source: 'self' });
+    setChanging(null);
+    if (status === 'missed' && !generalTaskFor(m)) {
+      const due = addDays(m.date, GENERAL_TASK_DAYS);
+      dispatch({
+        type: 'addTask',
+        task: {
+          projectId: series?.projectId ?? 'community', title: `General task for missing ${series?.name ?? 'the meeting'} (${shortDate(m.date)})`,
+          workstream: GENERAL_TASK, status: 'priority', owner: me.id, helpers: [], priority: 'High',
+          startWeek: CURRENT_WEEK, endWeek: weekOf(due), due, doneAt: null,
+          notes: `Do one general task and read the meeting minutes. meeting:${m.id}`, links: [],
+          history: [{ id: `gt-${m.id}`, who: 'Shapers Hub', text: 'created it after a missed meeting', when: 'just now' }],
+        },
+      });
+      flash(`Added a general task, due ${shortDate(due)}`);
+    } else {
+      flash(status === 'missed' ? 'Marked as not there' : `Marked: ${SELF_OPTIONS.find((o) => o.status === status)?.label}`);
+    }
+  };
+  const goToTask = (id: number) => {
+    try { document.getElementById(`task-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch { /* ignore */ }
+  };
   const today = state.meetings
     .filter((m) => m.date === DEMO_TODAY && (isAdmin || state.series.find((s) => s.id === m.seriesId)?.invited.includes(me.id)))
     .sort((a, b) => a.start.localeCompare(b.start));
@@ -75,27 +121,43 @@ export function TodayMeetings() {
                 <div className="stack" style={{ padding: '0 14px 14px', gap: 14 }}>
                   {invited ? (
                     <div className="inline" style={{ padding: 12, borderRadius: 10, background: 'var(--surface-2)' }}>
-                      {tracking ? (
+                      {live ? (
                         <>
-                          <span className="small">You are tracking this meeting since {state.tracking?.at}.</span>
-                          <button type="button" className="btn btn-primary btn-sm" style={{ minHeight: 40 }} onClick={stop}>Stop and log hours</button>
-                        </>
-                      ) : live && !state.tracking ? (
-                        <>
-                          <button type="button" className="btn btn-primary" onClick={() => start(m)}>{Icon.clock}Track time</button>
-                          <button type="button" className="btn btn-outline" onClick={() => start(m, 'remote')}>Joining remotely</button>
-                          <span className="tiny muted">Clocks you in and logs the time when you stop.</span>
+                          <a className="btn btn-primary" href={meetLink(m)} target="_blank" rel="noreferrer">{Icon.video}Joining remotely</a>
+                          <span className="tiny muted">Opens the Google Meet call.</span>
                         </>
                       ) : phase === 'upcoming' ? (
-                        <span className="small muted">Clock-in opens 10 minutes before {m.start}.</span>
-                      ) : rec ? (
-                        <span className="small">You were marked <strong>{STATUS_LOOK[rec.status].label.toLowerCase()}</strong>{rec.at ? `, clocked in at ${rec.at}` : ''}.</span>
+                        <span className="small muted">Starts at {m.start}. The Meet link opens here 10 minutes before.</span>
+                      ) : rec && changing !== m.id ? (
+                        <div className="stack" style={{ gap: 10, width: '100%' }}>
+                          <div className="inline">
+                            <span className="small">You marked: <strong>{SELF_OPTIONS.find((o) => o.status === rec.status)?.label ?? STATUS_LOOK[rec.status].label}</strong></span>
+                            <button type="button" className="btn btn-quiet btn-sm" onClick={() => setChanging(m.id)}>Change</button>
+                          </div>
+                          {rec.status === 'missed' ? (() => {
+                            const gt = generalTaskFor(m);
+                            return (
+                              <div className="inline" style={{ padding: 12, borderRadius: 10, background: 'var(--butter)', border: '1.5px solid var(--ink)' }}>
+                                <span className="small" style={{ flex: '1 1 220px' }}>
+                                  Missed meeting: do one general task{gt?.due ? ` by ${shortDate(gt.due)}` : ' within 14 days'} and read the minutes.
+                                </span>
+                                {gt ? <button type="button" className="btn btn-primary btn-sm" onClick={() => goToTask(gt.id)}>Open general task →</button> : null}
+                              </div>
+                            );
+                          })() : null}
+                        </div>
                       ) : (
-                        <span className="small muted">This meeting has ended. An admin can still mark you.</span>
+                        <div className="stack" style={{ gap: 8 }}>
+                          <span className="small strong">The meeting has ended. How did you join?</span>
+                          <div className="inline" role="group" aria-label={`How you joined ${series?.name}`}>
+                            {SELF_OPTIONS.map((o) => (
+                              <button key={o.status} type="button" className={`btn ${o.status === 'missed' ? 'btn-quiet' : 'btn-outline'}`} onClick={() => checkIn(m, o.status)}>{o.label}</button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   ) : null}
-                  {isAdmin && phase !== 'upcoming' ? <AttendanceRecorder meeting={m} embedded /> : null}
                 </div>
               ) : null}
             </li>

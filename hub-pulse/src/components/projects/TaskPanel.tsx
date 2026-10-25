@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
 import type { Priority, Task, TaskStatus } from '@/lib/types';
 import { shortDate, weekOf } from '@/lib/time';
@@ -10,11 +10,20 @@ import { BOARD_COLUMNS, STATUS_NAME, type ChangeTask } from './shared';
 export function TaskPanel({ task, color, onClose, change }: { task: Task; color: string; onClose: () => void; change: ChangeTask }) {
   const { state, dispatch, me, memberName } = useStore();
   const [notes, setNotes] = useState(task.notes);
+  const [title, setTitle] = useState(task.title);
+  // The title box grows with its text, so long names are never cut off.
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title]);
   const [link, setLink] = useState('');
   const [comment, setComment] = useState('');
 
   // Switching to another task resets the drafts.
-  useEffect(() => { setNotes(task.notes); setLink(''); setComment(''); }, [task.id, task.notes]);
+  useEffect(() => { setNotes(task.notes); setTitle(task.title); setLink(''); setComment(''); }, [task.id, task.notes, task.title]);
 
   const addable = state.members.filter((m) => m.id !== task.owner && !task.helpers.includes(m.id));
 
@@ -39,7 +48,38 @@ export function TaskPanel({ task, color, onClose, change }: { task: Task; color:
         <span className="inline tiny muted" style={{ gap: 6, fontWeight: 600 }}><span className="swatch" style={{ background: color }} />{task.workstream}</span>
         <button type="button" className="icon-btn" style={{ background: 'var(--line-soft)', color: 'var(--ink)', width: 36, height: 36 }} aria-label="Close task" onClick={onClose}>{Icon.close}</button>
       </div>
-      <h3 style={{ fontSize: 19, lineHeight: 1.3 }}>{task.title}</h3>
+      <label className="sr-only" htmlFor="f-title">Task title</label>
+      <textarea
+        id="f-title" ref={titleRef} className="title-input" rows={1} placeholder="What needs to happen?" value={title} autoFocus={!task.title}
+        onChange={(e) => setTitle(e.target.value.replace(/\n/g, ''))}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+        onBlur={() => { const v = title.trim(); if (v && v !== task.title) change(task, { title: v }, task.title ? 'renamed the task' : 'named the task'); }}
+      />
+
+      <div className="grid-2">
+        <div className="field-group">
+          <label className="label" htmlFor="f-project">Project</label>
+          <select
+            id="f-project" className="field" value={task.projectId}
+            onChange={(e) => {
+              const p = state.projects.find((x) => x.id === e.target.value);
+              if (!p || p.id === task.projectId) return;
+              change(task, { projectId: p.id, workstream: p.workstreams[0]?.name ?? task.workstream }, `moved it to ${p.name}`);
+            }}
+          >
+            {state.projects.filter((p) => p.status === 'active').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div className="field-group">
+          <label className="label" htmlFor="f-area">Area</label>
+          <select
+            id="f-area" className="field" value={task.workstream}
+            onChange={(e) => { if (e.target.value !== task.workstream) change(task, { workstream: e.target.value }, `moved it to ${e.target.value}`); }}
+          >
+            {(state.projects.find((p) => p.id === task.projectId)?.workstreams ?? []).map((w) => <option key={w.name} value={w.name}>{w.name}</option>)}
+          </select>
+        </div>
+      </div>
 
       <div className="grid-2">
         <div className="field-group">

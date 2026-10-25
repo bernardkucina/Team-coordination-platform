@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { TIER_HOURS } from '@/lib/types';
-import { attendanceStats, memberWeeks, meetingPhase } from '@/lib/rules';
-import { WEEK_PACE, dateInWeek, dayLabel, hoursText, shortDate } from '@/lib/time';
-import { ColumnChart, Kpi, Progress } from '../ui';
+import { attendanceStats, currentMonthDays, dailyHours, isSuperstar, memberWeeks, meetingPhase } from '@/lib/rules';
+import { CURRENT_WEEK, DEMO_TODAY, WEEK_PACE, dateInWeek, dayLabel, hoursText, longDate, shortDate, toMin, weekdayOf } from '@/lib/time';
+import { ColumnChart, Kpi, Progress, Segmented } from '../ui';
+import { Leaderboards } from './Leaderboards';
 import { STATUS_LOOK } from '../Meetings';
 
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
@@ -15,6 +16,7 @@ const num = (h: number) => String(Math.round(h * 10) / 10).replace('.', ',');
 export function MemberAnalytics() {
   const { state, me } = useStore();
   const [excuseSent, setExcuseSent] = useState<string[]>([]);
+  const [period, setPeriod] = useState<'week' | 'month'>('month');
 
   const commitment = TIER_HOURS[me.tier];
   const weeks = memberWeeks(me, state.timeEntries, state.tasks);
@@ -26,7 +28,13 @@ export function MemberAnalytics() {
   const metWeeks = finished.filter((w) => w.hours >= commitment).length;
   let streak = 0;
   for (let i = finished.length - 1; i >= 0 && finished[i].hours >= commitment; i--) streak++;
+  let bestRun = 0;
+  for (let i = 0, run = 0; i < finished.length; i++) { run = finished[i].hours >= commitment ? run + 1 : 0; bestRun = Math.max(bestRun, run); }
   const expectedNow = commitment * WEEK_PACE;
+  const perDay = dailyHours(me, state.timeEntries, state.tasks);
+  const monthDays = currentMonthDays();
+  const monthName = longDate(DEMO_TODAY).split(' ').slice(-1)[0];
+  const monthTotal = monthDays.reduce((a, d) => a + (perDay.get(d)?.hub ?? 0) + (perDay.get(d)?.remote ?? 0), 0);
   const stats = attendanceStats(me.id, state.meetings, state.series, state.attendance);
 
   const recentlyDone = state.tasks
@@ -51,33 +59,49 @@ export function MemberAnalytics() {
       <header className="page-head">
         <div>
           <span className="kicker">{me.name} · {me.tier} · {commitment} h a week</span>
-          <h1>My analytics</h1>
+          <h1>My pulse</h1>
         </div>
         <span className="small muted">Last {weeks.length} weeks, from {shortDate(dateInWeek(weeks[0].week, 0))}</span>
       </header>
 
-      <section className="kpis" aria-label="Summary">
-        <Kpi label="Hours logged" value={hoursText(totalHours)} note={`${hoursText(current.hours)} this week`} />
-        <Kpi
-          label="Weekly commitment"
-          value={`${metWeeks} of ${finished.length} weeks`}
-          note={streak > 1 ? `met · ${streak} weeks in a row` : 'met in full weeks'}
-        />
-        <Kpi label="Tasks finished" value={totalTasks} note={`${current.tasksDone} this week`} />
-        <Kpi label="Meeting attendance" value={stats.rate === null ? '—' : `${stats.rate} %`} note={`${stats.present} in person · ${stats.remote} remote · ${stats.missed} missed`} />
-        <Kpi label="Worked in the hub" value={`${pct(totalHub, totalHours)} %`} note={`${hoursText(totalHub)} in the hub · ${hoursText(totalHours - totalHub)} remote`} />
-      </section>
+      <div className="between" style={{ alignItems: 'center', gap: 20 }}>
+        <dl className="stat-strip" aria-label="Summary">
+          <div><dt>Logged</dt><dd>{hoursText(totalHours)}</dd></div>
+          <div><dt>Commitment met</dt><dd>{metWeeks} of {finished.length} weeks</dd></div>
+          <div><dt>Meetings</dt><dd>{stats.rate === null ? '—' : `${stats.rate} %`}</dd></div>
+        </dl>
+        <div className="streak-box" aria-label="Weekly streak">
+          <div className="stack" style={{ gap: 2 }}>
+            <span className="streak-count">🚀 {streak} {streak === 1 ? 'week' : 'weeks'} in a row{streak > 0 ? ' 🔥' : ''}</span>
+            {isSuperstar(current.hours, me) ? <span className="superstar">⭐ Superstar this week</span> : null}
+            <span className="tiny muted">{streak > 0 ? `You met your ${commitment} h every week since W${CURRENT_WEEK - streak}.` : `Best run: ${bestRun} weeks. Hit ${commitment} h this week to start a new one.`}</span>
+          </div>
+          <ol className="streak-weeks">
+            {weeks.map((w) => (
+              <li key={w.week} className={w.current ? 'now' : w.hours >= commitment ? 'met' : 'miss'} title={`W${w.week}: ${hoursText(w.hours)} of ${commitment} h${w.current ? ', in progress' : ''}`}>
+                <span>W{w.week}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      <Leaderboards />
 
       <section className="card" aria-labelledby="hw-h">
         <div className="between">
-          <h2 id="hw-h">Hours per week, in the hub and remote</h2>
+          <div className="inline" style={{ gap: 14 }}>
+            <h2 id="hw-h">{period === 'week' ? 'Hours per week, in the hub and remote' : `Hours per day in ${monthName}: ${hoursText(monthTotal)}`}</h2>
+            <Segmented label="Group hours by" value={period} onChange={setPeriod} options={[{ value: 'week', label: 'Weeks' }, { value: 'month', label: 'Month' }]} />
+          </div>
           <span className="inline small muted" style={{ gap: 14 }}>
             <span className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: 'var(--hub)' }} />In the hub</span>
             <span className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: 'var(--remote)' }} />Remote</span>
-            <span className="legend"><span className="dash" />Commitment ({commitment} h)</span>
+            {period === 'week' ? <span className="legend"><span className="dash" />Commitment ({commitment} h)</span> : null}
           </span>
         </div>
-        <ColumnChart
+        {period === 'week' ? (
+          <ColumnChart
           refValue={commitment}
           columns={weeks.map((w) => ({
             key: String(w.week),
@@ -89,6 +113,24 @@ export function MemberAnalytics() {
             tip: `Week ${w.week}${w.current ? ', in progress' : ''}: ${hoursText(w.hours)} (${hoursText(w.hub)} hub, ${hoursText(w.remote)} remote)`,
           }))}
         />
+        ) : (
+          <ColumnChart
+            columns={monthDays.map((d) => {
+              const v = perDay.get(d) ?? { hub: 0, remote: 0 };
+              const total = v.hub + v.remote;
+              const future = d > DEMO_TODAY;
+              return {
+                key: d,
+                label: String(Number(d.slice(8))),
+                value: total,
+                valueText: total ? num(Math.round(total * 2) / 2) : '',
+                current: d === DEMO_TODAY,
+                parts: [{ value: v.hub, color: 'var(--hub)' }, { value: v.remote, color: 'var(--remote)' }],
+                tip: `${dayLabel(d)}${weekdayOf(d) > 4 ? ' (weekend)' : ''}: ${future ? 'not yet' : total ? `${hoursText(total)} (${hoursText(v.hub)} hub, ${hoursText(v.remote)} remote)` : 'no hours'}`,
+              };
+            })}
+          />
+        )}
       </section>
 
       <div className="row">
@@ -121,34 +163,7 @@ export function MemberAnalytics() {
           <span className="tiny muted">This week you are expected to have {hoursText(expectedNow)} by today ({Math.round(WEEK_PACE * 100)} % of the week&apos;s working days).</span>
         </section>
 
-        <section className="card" aria-labelledby="tk-h" style={{ flex: '1 1 380px', minWidth: 0 }}>
-          <div className="between">
-            <h2 id="tk-h">Tasks finished</h2>
-            <span className="small muted">{totalTasks} in {weeks.length} weeks</span>
-          </div>
-          <ColumnChart
-            height={110}
-            columns={weeks.map((w) => ({
-              key: String(w.week), label: `W${w.week}`, value: w.tasksDone, valueText: String(w.tasksDone), current: w.current,
-              tip: `Week ${w.week}: ${w.tasksDone} task${w.tasksDone === 1 ? '' : 's'} finished`,
-            }))}
-          />
-          <h3 style={{ marginTop: 4 }}>Recently finished</h3>
-          {recentlyDone.length ? (
-            <ul className="list">
-              {recentlyDone.map((t) => (
-                <li key={t.id} className="between small" style={{ flexWrap: 'nowrap' }}>
-                  <span style={{ fontWeight: 600, minWidth: 0 }}>{t.title}</span>
-                  <span className="muted" style={{ flex: 'none' }}>{t.doneAt ? dayLabel(t.doneAt) : ''}</span>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="small muted">Nothing finished yet.</p>}
-        </section>
-      </div>
-
-      <div className="row">
-        <section className="card" aria-labelledby="mt-h" style={{ flex: '3 1 520px', minWidth: 0 }}>
+        <section className="card" aria-labelledby="mt-h" style={{ flex: '1 1 420px', minWidth: 0 }}>
           <div className="between">
             <h2 id="mt-h">Meeting attendance</h2>
             <span className="small muted">Excused absences don&apos;t count against you</span>
@@ -196,13 +211,6 @@ export function MemberAnalytics() {
           </div>
         </section>
 
-        <section aria-labelledby="gm-h" className="card" style={{ flex: '2 1 300px', minWidth: 0, border: '2px dashed #a3b6d5', background: 'var(--surface-2)' }}>
-          <span className="pill info" style={{ alignSelf: 'flex-start' }}>After the MVP</span>
-          <h2 id="gm-h" style={{ fontSize: 18 }}>Streaks and recognition</h2>
-          <p className="small" style={{ lineHeight: 1.5, color: 'var(--ink-2)' }}>
-            Reserved for gamification once the core works: weeks in a row at your commitment, on-time clock-ins, and tasks you picked up yourself.
-          </p>
-        </section>
       </div>
     </>
   );

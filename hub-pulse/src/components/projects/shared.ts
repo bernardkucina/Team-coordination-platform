@@ -1,7 +1,7 @@
 import type { Task, TaskStatus } from '@/lib/types';
 
 export const STATUS_NAME: Record<TaskStatus, string> = {
-  priority: 'Priority', progress: 'In progress', validation: 'Validation', done: 'Done', idea: 'Ideas',
+  priority: 'To do', progress: 'In progress', validation: 'Validation', done: 'Done', idea: 'Ideas',
 };
 
 /** Board column order. Ideas sit last: least important. */

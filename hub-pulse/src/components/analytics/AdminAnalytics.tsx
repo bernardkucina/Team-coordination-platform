@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { TIER_HOURS, type AttendanceStatus, type Tier } from '@/lib/types';
-import { attendanceStats, entryMinutes, memberWeeks, paceStatus, weekHours } from '@/lib/rules';
-import { CURRENT_WEEK, DEMO_TODAY, WEEK_PACE, hoursText, longDate, weekOf } from '@/lib/time';
+import { attendanceStats, currentMonthDays, dailyHours, entryMinutes, memberWeeks, paceStatus, sumDays, weekHours } from '@/lib/rules';
+import { CURRENT_WEEK, DEMO_TODAY, WEEK_PACE, dayLabel, hoursText, longDate, weekOf, weekdayOf } from '@/lib/time';
 import { Avatar, ColumnChart, Kpi, Progress, Segmented } from '../ui';
+import { Leaderboards } from './Leaderboards';
 
 const SERIES_COLORS: Record<AttendanceStatus, string> = { present: 'var(--hub)', remote: '#7fa6e8', excused: '#e3a93b', missed: '#c93a3a' };
 
@@ -14,13 +14,23 @@ export function AdminAnalytics() {
   const { state } = useStore();
   const [tier, setTier] = useState<Tier | 'all'>('all');
   const [hoverSeries, setHoverSeries] = useState<string | null>(null);
+  const [period, setPeriod] = useState<'week' | 'month'>('month');
 
   const members = state.members.filter((m) => tier === 'all' || m.tier === tier);
+  const perDay = sumDays(members.map((m) => dailyHours(m, state.timeEntries, state.tasks)));
+  const monthDays = currentMonthDays();
+  const monthName = longDate(DEMO_TODAY).split(' ').slice(-1)[0];
+  const monthTotal = monthDays.reduce((a, d) => a + (perDay.get(d)?.hub ?? 0) + (perDay.get(d)?.remote ?? 0), 0);
+  const r1 = (n: number) => String(Math.round(n * 2) / 2).replace('.', ',');
   const withHours = members.map((m) => ({ m, hours: weekHours(state.timeEntries, m.id) }));
   const behind = withHours.filter(({ m, hours }) => paceStatus(hours, m) === 'behind')
     .sort((a, b) => a.hours / TIER_HOURS[a.m.tier] - b.hours / TIER_HOURS[b.m.tier]);
   const logged = withHours.reduce((a, x) => a + x.hours, 0);
   const committed = members.reduce((a, m) => a + TIER_HOURS[m.tier], 0);
+  // Member of the week: furthest along their own tier's commitment this week; picking up tasks breaks a tie.
+  const star = [...withHours]
+    .map((x) => ({ ...x, ratio: x.hours / TIER_HOURS[x.m.tier] }))
+    .sort((a, b) => b.ratio - a.ratio || b.m.picked - a.m.picked)[0];
 
   // Per member, per week: hours (hub / remote) and tasks finished. Follows the tier filter.
   const perMember = members.map((m) => ({ m, weeks: memberWeeks(m, state.timeEntries, state.tasks) }));
@@ -75,138 +85,89 @@ export function AdminAnalytics() {
         />
       </header>
 
-      <section className="kpis" aria-label="Key numbers">
-        <Kpi label="On track this week" value={`${members.length - behind.length} of ${members.length}`} note="members at or above pace" />
-        <Kpi label="Hours logged" value={hoursText(logged)} note={`of ${committed} h committed`} />
-        <Kpi label={`Attendance, last ${trend.length} weeks`} value={`${overall} %`} note="in person or remote, excused not counted" />
-        <Kpi label="Tasks finished this week" value={doneThisWeek} note={`${tasksSixWeeks} in ${trend.length} weeks · ${inValidation} in Validation`} />
-        <Kpi label="Worked in the hub" value={`${totalAll ? Math.round((totalHub / totalAll) * 100) : 0} %`} note={`${hoursText(totalHub)} hub · ${hoursText(totalAll - totalHub)} remote, ${trend.length} weeks`} />
-      </section>
-
-      <div className="row">
-        <section className="card" aria-labelledby="behind-h" style={{ flex: '3 1 520px', minWidth: 0 }}>
-          <div className="between">
-            <h2 id="behind-h">Behind this week</h2>
-            <span className="small muted">Below {Math.round(WEEK_PACE * 100)} % of commitment, the pace expected by today</span>
-          </div>
-          <ul className="list">
-            {behind.map(({ m, hours }) => (
-              <li key={m.id} className="inline" style={{ gap: 12 }}>
-                <Avatar initials={m.initials} />
-                <span className="stack" style={{ gap: 2, flex: '1 1 140px' }}>
-                  <span style={{ fontWeight: 600 }}>{m.name}</span>
-                  <span className="tiny muted">{m.tier}</span>
-                </span>
-                <span className="stack" style={{ gap: 6, flex: '1 1 160px' }}>
-                  <span className="small"><strong>{hoursText(hours)}</strong> of {TIER_HOURS[m.tier]} h · {hoursText(TIER_HOURS[m.tier] - hours)} to go</span>
-                  <Progress value={hours} max={TIER_HOURS[m.tier]} />
-                </span>
-                <Link href="/team" className="btn btn-quiet btn-sm" style={{ textDecoration: 'none' }}>History</Link>
-              </li>
-            ))}
-          </ul>
-          {behind.length === 0 ? <p className="small muted">Everyone in this tier is on pace.</p> : null}
-        </section>
-
-        <section className="card" aria-labelledby="proj-h" style={{ flex: '2 1 320px', minWidth: 0 }}>
-          <h2 id="proj-h">Hours by project, this week</h2>
-          {byProject.map((p) => (
-            <div key={p.name} className="stack" style={{ gap: 6 }}>
-              <div className="between small"><span style={{ fontWeight: 600 }}>{p.name}</span><span><strong>{hoursText(p.hours)}</strong> · {Math.round((p.hours / projectTotal) * 100)} %</span></div>
-              <Progress value={p.hours} max={byProject[0].hours} large />
+      <div className="inline" style={{ justifyContent: 'flex-end' }}>
+        {star ? (
+          <div className="streak-box" aria-label="Member of the week">
+            <span style={{ fontSize: 34, lineHeight: 1 }} aria-hidden="true">🏆</span>
+            <div className="stack" style={{ gap: 2 }}>
+              <span className="tiny muted" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Member of the week</span>
+              <span className="streak-count inline" style={{ gap: 8 }}><Avatar small initials={star.m.initials} />{star.m.name} ⭐</span>
+              <span className="tiny muted">{Math.round(star.ratio * 100)} % of their {TIER_HOURS[star.m.tier]} h already{star.m.picked ? ` · picked up ${star.m.picked} ${star.m.picked === 1 ? 'task' : 'tasks'} themselves` : ''}</span>
             </div>
-          ))}
-          <h3 style={{ marginTop: 8 }}>By tier</h3>
-          {(Object.keys(TIER_HOURS) as Tier[]).map((t) => {
-            const ms = state.members.filter((m) => m.tier === t);
-            const h = ms.reduce((a, m) => a + weekHours(state.timeEntries, m.id), 0);
-            const c = ms.length * TIER_HOURS[t];
-            return (
-              <div key={t} className="stack" style={{ gap: 6 }}>
-                <div className="between small"><span style={{ fontWeight: 600 }}>{t} · {TIER_HOURS[t]} h</span><span className="muted">{hoursText(h)} of {c} h · {ms.length} people</span></div>
-                <Progress value={h} max={c} />
-              </div>
-            );
-          })}
-        </section>
+          </div>
+        ) : null}
       </div>
 
-      <section className="card" aria-labelledby="mem-h">
-        <div className="between">
-          <h2 id="mem-h">Members</h2>
-          <span className="small muted">Last {trend.length} weeks · lowest commitment first</span>
-        </div>
-        <div className="scroll-x">
-          <table className="table" style={{ minWidth: 820 }}>
-            <thead>
-              <tr>
-                <th>Member</th>
-                <th>This week</th>
-                <th className="num">Weeks at commitment</th>
-                <th className="num">Hours</th>
-                <th className="num">Tasks finished</th>
-                <th className="num">Attendance</th>
-                <th style={{ width: 170 }}>Hub / remote</th>
-              </tr>
-            </thead>
-            <tbody>
-              {perMember
-                .map(({ m, weeks }) => {
-                  const c = TIER_HOURS[m.tier];
-                  const done = weeks.filter((w) => !w.current);
-                  const met = done.filter((w) => w.hours >= c).length;
-                  const hours = weeks.reduce((a, w) => a + w.hours, 0);
-                  const hub = weeks.reduce((a, w) => a + w.hub, 0);
-                  const tasks = weeks.reduce((a, w) => a + w.tasksDone, 0);
-                  const st = attendanceStats(m.id, state.meetings, state.series, state.attendance);
-                  const now = weeks[weeks.length - 1];
-                  return { m, c, done, met, hours, hub, tasks, st, now };
-                })
-                .sort((a, b) => a.met / Math.max(1, a.done.length) - b.met / Math.max(1, b.done.length) || a.now.hours / a.c - b.now.hours / b.c)
-                .map(({ m, c, done, met, hours, hub, tasks, st, now }) => {
-                  const behindNow = paceStatus(now.hours, m) === 'behind';
-                  return (
-                    <tr key={m.id}>
-                      <th scope="row" style={{ whiteSpace: 'nowrap' }}>
-                        <span className="inline" style={{ gap: 8, flexWrap: 'nowrap' }}><Avatar small initials={m.initials} />{m.name}</span>
-                      </th>
-                      <td>
-                        <span className="stack" style={{ gap: 4, minWidth: 120 }}>
-                          <span className="small" style={{ color: behindNow ? 'var(--bad)' : undefined, fontWeight: behindNow ? 700 : 400 }}>{hoursText(now.hours)} of {c} h</span>
-                          <Progress value={now.hours} max={c} />
-                        </span>
-                      </td>
-                      <td className="num"><strong>{met}</strong> of {done.length}</td>
-                      <td className="num">{hoursText(hours)}</td>
-                      <td className="num">{tasks}</td>
-                      <td className="num" style={{ color: st.rate !== null && st.rate < 70 ? 'var(--bad)' : undefined }}>{st.rate === null ? '—' : `${st.rate} %`}</td>
-                      <td>
-                        <span className="inline" style={{ gap: 8, flexWrap: 'nowrap' }}>
-                          <span style={{ display: 'flex', gap: 2, height: 10, flex: '1 1 auto' }} aria-hidden="true">
-                            <span style={{ flex: `${hub} 1 0`, background: 'var(--hub)', borderRadius: 3 }} />
-                            <span style={{ flex: `${Math.max(0, hours - hub)} 1 0`, background: 'var(--remote)', borderRadius: 3 }} />
-                          </span>
-                          <span className="tiny" style={{ width: 70 }}>{hours ? Math.round((hub / hours) * 100) : 0} % hub</span>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <Leaderboards />
+
+      <div className="row">
+
+          <section className="card" aria-labelledby="proj-h" style={{ flex: '1 1 360px', minWidth: 0 }}>
+            <h2 id="proj-h">Hours by project, this week</h2>
+            {byProject.map((p) => (
+              <div key={p.name} className="stack" style={{ gap: 6 }}>
+                <div className="between small"><span style={{ fontWeight: 600 }}>{p.name}</span><span><strong>{hoursText(p.hours)}</strong> · {Math.round((p.hours / projectTotal) * 100)} %</span></div>
+                <Progress value={p.hours} max={byProject[0].hours} large />
+              </div>
+            ))}
+            <h3 style={{ marginTop: 8 }}>By tier</h3>
+            {(Object.keys(TIER_HOURS) as Tier[]).map((t) => {
+              const ms = state.members.filter((m) => m.tier === t);
+              const h = ms.reduce((a, m) => a + weekHours(state.timeEntries, m.id), 0);
+              const c = ms.length * TIER_HOURS[t];
+              return (
+                <div key={t} className="stack" style={{ gap: 6 }}>
+                  <div className="between small"><span style={{ fontWeight: 600 }}>{t} · {TIER_HOURS[t]} h</span><span className="muted">{hoursText(h)} of {c} h · {ms.length} people</span></div>
+                  <Progress value={h} max={c} />
+                </div>
+              );
+            })}
+          </section>
+          <section className="card" aria-labelledby="series-h" style={{ flex: '1 1 360px', minWidth: 0 }}>
+            <div className="stack" style={{ gap: 10 }}>
+              <h2 id="series-h">Attendance by series, last 8 weeks</h2>
+              <div className="inline tiny muted" style={{ gap: 10 }}>
+                {(['present', 'remote', 'excused', 'missed'] as AttendanceStatus[]).map((k) => (
+                  <span key={k} className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: SERIES_COLORS[k] }} />{k === 'present' ? 'In person' : k[0].toUpperCase() + k.slice(1)}</span>
+                ))}
+              </div>
+            </div>
+            <div className="stack" style={{ gap: 14 }}>
+              {seriesRows.map(({ s, parts, showed }) => (
+                <div key={s.id} className="inline" style={{ position: 'relative', gap: '4px 12px' }} onMouseEnter={() => setHoverSeries(s.id)} onMouseLeave={() => setHoverSeries(null)}>
+                  <span style={{ flex: '1 1 100%', fontWeight: 600, fontSize: 14 }}>{s.name}</span>
+                  <div style={{ flex: '1 1 120px', display: 'flex', gap: 2, height: 14 }}>
+                    {parts.map((p, i) => (
+                      <div key={p.k} style={{ width: `${p.pct}%`, background: SERIES_COLORS[p.k], borderRadius: i === 0 ? '4px 0 0 4px' : i === parts.length - 1 ? '0 4px 4px 0' : 0 }} />
+                    ))}
+                  </div>
+                  <span className="small" style={{ flex: '0 0 96px', textAlign: 'right' }}><strong>{showed} %</strong> showed</span>
+                  {hoverSeries === s.id ? (
+                    <div className="tip" role="tooltip" style={{ right: 0, bottom: 'calc(100% + 4px)' }}>
+                      {s.name} · {parts.map((p) => `${p.k} ${p.pct} %`).join(' · ')}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+
+      </div>
 
       <section className="card" aria-labelledby="trend-h">
         <div className="between">
-          <h2 id="trend-h">Committed hours delivered, in the hub and remote</h2>
+          <div className="inline" style={{ gap: 14 }}>
+            <h2 id="trend-h">{period === 'week' ? 'Committed hours delivered, in the hub and remote' : `Hours per day in ${monthName}: ${hoursText(Math.round(monthTotal))}`}</h2>
+            <Segmented label="Group hours by" value={period} onChange={setPeriod} options={[{ value: 'week', label: 'Weeks' }, { value: 'month', label: 'Month' }]} />
+          </div>
           <span className="inline small muted" style={{ gap: 14 }}>
             <span className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: 'var(--hub)' }} />In the hub</span>
             <span className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: 'var(--remote)' }} />Remote</span>
-            <span className="legend"><span className="dash" />100 % of commitment</span>
+            {period === 'week' ? <span className="legend"><span className="dash" />100 % of commitment</span> : null}
           </span>
         </div>
-        <ColumnChart
+        {period === 'week' ? (
+          <ColumnChart
           refValue={100} max={115}
           columns={trend.map((w) => ({
             key: String(w.week), label: w.current ? `W${w.week} (now)` : `W${w.week}`, value: w.pct, valueText: `${w.pct} %`,
@@ -214,35 +175,19 @@ export function AdminAnalytics() {
             parts: [{ value: w.hubPct, color: 'var(--hub)' }, { value: w.remotePct, color: 'var(--remote)' }],
           }))}
         />
-      </section>
-
-      <section className="card" aria-labelledby="series-h">
-        <div className="stack" style={{ gap: 10 }}>
-          <h2 id="series-h">Attendance by meeting series, last 8 weeks</h2>
-          <div className="inline small muted" style={{ gap: 14 }}>
-            {(['present', 'remote', 'excused', 'missed'] as AttendanceStatus[]).map((k) => (
-              <span key={k} className="inline" style={{ gap: 6 }}><span className="swatch" style={{ background: SERIES_COLORS[k] }} />{k === 'present' ? 'In person' : k[0].toUpperCase() + k.slice(1)}</span>
-            ))}
-          </div>
-        </div>
-        <div className="stack" style={{ gap: 14 }}>
-          {seriesRows.map(({ s, parts, showed }) => (
-            <div key={s.id} className="inline" style={{ position: 'relative', gap: '8px 16px' }} onMouseEnter={() => setHoverSeries(s.id)} onMouseLeave={() => setHoverSeries(null)}>
-              <span style={{ flex: '0 0 170px', fontWeight: 600, fontSize: 14 }}>{s.name}</span>
-              <div style={{ flex: '1 1 220px', display: 'flex', gap: 2, height: 16 }}>
-                {parts.map((p, i) => (
-                  <div key={p.k} style={{ width: `${p.pct}%`, background: SERIES_COLORS[p.k], borderRadius: i === 0 ? '4px 0 0 4px' : i === parts.length - 1 ? '0 4px 4px 0' : 0 }} />
-                ))}
-              </div>
-              <span className="small" style={{ flex: '0 0 96px', textAlign: 'right' }}><strong>{showed} %</strong> showed</span>
-              {hoverSeries === s.id ? (
-                <div className="tip" role="tooltip" style={{ right: 0, bottom: 'calc(100% + 4px)' }}>
-                  {s.name} · {parts.map((p) => `${p.k} ${p.pct} %`).join(' · ')}
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
+        ) : (
+          <ColumnChart
+            columns={monthDays.map((d) => {
+              const v = perDay.get(d) ?? { hub: 0, remote: 0 };
+              const total = v.hub + v.remote;
+              return {
+                key: d, label: String(Number(d.slice(8))), value: total, valueText: total ? r1(total) : '', current: d === DEMO_TODAY,
+                parts: [{ value: v.hub, color: 'var(--hub)' }, { value: v.remote, color: 'var(--remote)' }],
+                tip: `${dayLabel(d)}${weekdayOf(d) > 4 ? ' (weekend)' : ''}: ${d > DEMO_TODAY ? 'not yet' : total ? `${r1(total)} h (${r1(v.hub)} h hub, ${r1(v.remote)} h remote)` : 'no hours'}`,
+              };
+            })}
+          />
+        )}
       </section>
     </>
   );

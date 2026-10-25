@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { AREAS, areaById } from '@/lib/data';
+import { AREAS, PROJECT_TAGLINES, areaById } from '@/lib/data';
 import type { AreaId, Project } from '@/lib/types';
 import { Avatar, Progress } from '../ui';
 
@@ -14,30 +14,31 @@ export function ProjectsOverview({ onOpen }: { onOpen: (projectId: string) => vo
   const [area, setArea] = useState<AreaFilter>('all');
   const [mineOnly, setMineOnly] = useState(false);
 
+  /** You are on a project when you own or help with one of its tasks. Nobody joins or leaves by hand. */
+  const teamOf = (p: Project): string[] => {
+    const ids = new Set<string>();
+    for (const t of state.tasks) {
+      if (t.projectId !== p.id || t.status === 'idea') continue;
+      if (t.owner) ids.add(t.owner);
+      t.helpers.forEach((h) => ids.add(h));
+    }
+    return [...ids];
+  };
   const activeProjects = state.projects.filter((p) => p.status === 'active');
   const plannedProjects = state.projects.filter((p) => p.status === 'planned');
-  const myProjects = activeProjects.filter((p) => p.members.includes(me.id));
+  const myProjects = activeProjects.filter((p) => teamOf(p).includes(me.id));
   const shown = activeProjects
     .filter((p) => area === 'all' || p.mainArea === area || p.workstreams.some((w) => w.name === areaById(area).name))
-    .filter((p) => !mineOnly || p.members.includes(me.id));
+    .filter((p) => !mineOnly || teamOf(p).includes(me.id));
   const me_ = state.members.find((m) => m.id === me.id) ?? me;
 
-  const joinOrLeave = (p: Project) => {
-    const inTeam = p.members.includes(me.id);
-    if (inTeam && myProjects.length === 1) {
-      flash('You need to stay in at least one project. Join another one first.');
-      return;
-    }
-    dispatch({ type: inTeam ? 'leaveProject' : 'joinProject', projectId: p.id, memberId: me.id });
-    flash(inTeam ? `You left ${p.name}` : `You joined ${p.name}`);
-  };
 
   return (
     <div className="stack" style={{ gap: 28 }}>
       {myProjects.length === 0 ? (
         <div role="status" className="card" style={{ background: 'var(--warn-bg)', borderColor: 'var(--ink)', padding: 18 }}>
           <strong style={{ color: 'var(--warn)' }}>You are not in a project yet.</strong>
-          <span className="small" style={{ color: 'var(--warn)' }}>Everyone is active in at least one project. Pick one below; you can switch any time.</span>
+          <span className="small" style={{ color: 'var(--warn)' }}>You join a project when a task in it is assigned to you.</span>
         </div>
       ) : null}
 
@@ -46,12 +47,14 @@ export function ProjectsOverview({ onOpen }: { onOpen: (projectId: string) => vo
           <div className="stack" style={{ gap: 4 }}>
             <h2 id="active-h">Projects we run</h2>
             <span className="small muted">
-              You are in {myProjects.length} of {activeProjects.length}. Join as many as you like, and switch if a project isn&apos;t for you.
+              You are in {myProjects.length} of {activeProjects.length}: the projects where you have tasks.
             </span>
           </div>
-          <button type="button" className={mineOnly ? 'btn btn-primary btn-sm' : 'btn btn-quiet btn-sm'} style={{ minHeight: 38 }} aria-pressed={mineOnly} onClick={() => setMineOnly(!mineOnly)}>
-            Only my projects
-          </button>
+          <div className="place-toggle">
+            <span className={mineOnly ? '' : 'on'} aria-hidden="true">All projects</span>
+            <button type="button" role="switch" className="switch" aria-checked={mineOnly} aria-label="Show only my projects" onClick={() => setMineOnly(!mineOnly)}><span /></button>
+            <span className={mineOnly ? 'on' : ''} aria-hidden="true">My projects</span>
+          </div>
         </div>
         <div className="chips" role="group" aria-label="Filter by area">
           <button type="button" className="btn btn-sm" aria-pressed={area === 'all'} onClick={() => setArea('all')}
@@ -72,46 +75,37 @@ export function ProjectsOverview({ onOpen }: { onOpen: (projectId: string) => vo
             const tasks = state.tasks.filter((t) => t.projectId === p.id && t.status !== 'idea');
             const done = tasks.filter((t) => t.status === 'done').length;
             const openCount = tasks.length - done;
-            const inTeam = p.members.includes(me.id);
+            const team = teamOf(p);
+            const inTeam = team.includes(me.id);
             return (
-              <article key={p.id} className="card" style={{ padding: 20, gap: 12, borderTop: `4px solid ${main.color}` }} aria-labelledby={`pc-${p.id}`}>
+              <article
+                key={p.id} className="card card-link" style={{ padding: 20, gap: 12 }} aria-labelledby={`pc-${p.id}`}
+                role="link" tabIndex={0} onClick={() => onOpen(p.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(p.id); } }}
+              >
                 <div className="stack" style={{ gap: 8 }}>
                   <div className="between" style={{ alignItems: 'flex-start', flexWrap: 'nowrap' }}>
                     <h3 id={`pc-${p.id}`} style={{ fontSize: 17, lineHeight: 1.3 }}>
+                      <span className="swatch" title={main.name} style={{ width: 12, height: 12, background: main.color, marginRight: 8, verticalAlign: 'middle' }} />
                       {p.number ? <span className="muted" style={{ fontWeight: 600, marginRight: 6 }}>{p.number}</span> : null}{p.name}
                     </h3>
                     {inTeam ? <span className="pill good">You&apos;re in</span> : null}
                   </div>
-                  <div className="inline" style={{ gap: 6 }}>
-                    <span className="pill" style={{ background: main.color, color: 'var(--ink)' }}>{main.name}</span>
-                    {p.tags.map((t) => <span key={t} className="pill neutral">{t}</span>)}
-                  </div>
+                  <span className="tiny muted" style={{ lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {PROJECT_TAGLINES[p.id] ?? p.description.split(/(?<=[.!?])\s/)[0]}
+                  </span>
                 </div>
-                <p className="small" style={{ lineHeight: 1.5, color: 'var(--ink-2)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {p.description}
-                </p>
-                {p.roles.length ? (
-                  <div className="inline" style={{ gap: 6 }}>
-                    {p.roles.map((r) => <span key={r.name} className="pill info" title={r.description}>{r.name}</span>)}
-                  </div>
-                ) : null}
                 <div className="stack" style={{ gap: 6 }}>
                   <div className="between tiny muted"><span>{openCount} open tasks</span><span>{done} done</span></div>
                   <Progress value={done} max={tasks.length || 1} />
                 </div>
-                <div className="between" style={{ alignItems: 'center', marginTop: 'auto', flexWrap: 'nowrap' }}>
-                  <div className="inline" style={{ gap: 3, flexWrap: 'nowrap' }} aria-label={`${p.members.length} people in the team`}>
-                    {p.members.slice(0, 6).map((id) => {
+                <div className="stack" style={{ marginTop: 'auto', gap: 12 }}>
+                  <div className="inline" style={{ gap: 3, flexWrap: 'nowrap' }} aria-label={`${team.length} people in the team`}>
+                    {team.slice(0, 6).map((id) => {
                       const m = state.members.find((x) => x.id === id);
                       return m ? <span key={id} title={m.name}><Avatar small initials={m.initials} /></span> : null;
                     })}
-                    {p.members.length > 6 ? <span className="tiny muted">+{p.members.length - 6}</span> : null}
-                  </div>
-                  <div className="inline" style={{ gap: 6, flexWrap: 'nowrap' }}>
-                    <button type="button" className={inTeam ? 'btn btn-quiet btn-sm' : 'btn btn-outline btn-sm'} style={{ minHeight: 36 }} onClick={() => joinOrLeave(p)}>
-                      {inTeam ? 'Leave' : 'Join'}
-                    </button>
-                    <button type="button" className="btn btn-primary btn-sm" style={{ minHeight: 36 }} onClick={() => onOpen(p.id)}>Open board</button>
+                    {team.length > 6 ? <span className="tiny muted">+{team.length - 6}</span> : null}
                   </div>
                 </div>
               </article>

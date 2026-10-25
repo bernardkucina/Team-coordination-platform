@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Segmented } from '@/components/ui';
 import { ProjectsOverview } from '@/components/projects/ProjectsOverview';
@@ -12,6 +12,12 @@ export default function ProjectsPage() {
   const { isAdmin } = useStore();
   const [tab, setTab] = useState<Tab>('overview');
   const [projectId, setProjectId] = useState<string>(ALL_PROJECTS);
+
+  // Projects are the busiest screen, so they use the whole window with a 1 cm margin.
+  useEffect(() => {
+    document.body.classList.add('wide-page');
+    return () => document.body.classList.remove('wide-page');
+  }, []);
 
   return (
     <>
@@ -26,7 +32,7 @@ export default function ProjectsPage() {
           label="Projects sections"
           value={tab}
           onChange={setTab}
-          options={[{ value: 'overview', label: 'Overview' }, { value: 'work', label: 'Board & timeline' }]}
+          options={[{ value: 'overview', label: 'Overview' }, { value: 'work', label: 'Board' }]}
         />
       </header>
       {tab === 'overview' ? (

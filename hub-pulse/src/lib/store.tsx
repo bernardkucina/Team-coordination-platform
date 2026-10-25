@@ -38,6 +38,7 @@ export type Action =
   | { type: 'updateTask'; taskId: number; patch: Partial<Task>; who: string; text: string }
   | { type: 'comment'; taskId: number; who: string; text: string }
   | { type: 'addTask'; task: Omit<Task, 'id'> }
+  | { type: 'reorderTasks'; ids: number[] }
   | { type: 'startWork'; timer: WorkTimer }
   | { type: 'stopWork'; end: string }
   | { type: 'addProject'; project: NewProject; who: string }
@@ -177,6 +178,10 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case 'addTask':
       return { ...state, tasks: [...state.tasks, { ...action.task, id: state.nextId }], nextId: state.nextId + 1 };
+    case 'reorderTasks': {
+      const pos = new Map(action.ids.map((id, i) => [id, i]));
+      return { ...state, tasks: state.tasks.map((t) => (pos.has(t.id) ? { ...t, rank: pos.get(t.id) } : t)) };
+    }
     case 'startWork':
       return { ...state, workTimer: action.timer };
     case 'stopWork': {

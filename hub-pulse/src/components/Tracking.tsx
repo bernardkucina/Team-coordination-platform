@@ -46,7 +46,7 @@ export function TrackMeetingButton() {
       onClick={() => live && start(live)}
     >
       {Icon.clock}
-      Track meeting
+      Track time
     </button>
   );
 }

@@ -89,6 +89,8 @@ export interface Task {
   links: TaskLink[];
   /** Newest first. */
   history: HistoryEntry[];
+  /** Position in the project's to-do list once someone has reordered it. */
+  rank?: number;
 }
 
 /** A board row inside a project. Rows are the areas that work on the project. */
@@ -167,6 +169,8 @@ export interface Meeting {
   end: string;
   /** An admin confirmed the attendance list. */
   recorded: boolean;
+  /** Google Meet link from the Calendar event (hangoutLink). */
+  meetUrl?: string;
 }
 
 export interface AttendanceRecord {

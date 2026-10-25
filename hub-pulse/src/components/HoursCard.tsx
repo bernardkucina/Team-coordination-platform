@@ -5,7 +5,7 @@ import { useStore } from '@/lib/store';
 import { TIER_HOURS, type Place } from '@/lib/types';
 import { MEMBER_LOG_DAYS_BACK, entryMinutes, paceStatus, weekHours } from '@/lib/rules';
 import { CURRENT_WEEK, DEMO_TODAY, addDays, dayLabel, durText, hoursText, nowHM, pad, toMin, weekOf } from '@/lib/time';
-import { Icon, Progress, Segmented } from './ui';
+import { Icon, Progress } from './ui';
 
 const STATUS_TEXT = { met: 'Commitment met', 'on-track': 'On track', behind: 'Behind pace' } as const;
 
@@ -94,21 +94,29 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
         </div>
       ) : (
         <>
-        <Segmented<Place> label="Where are you working" value={place} onChange={setPlace} options={[{ value: 'hub', label: 'In the hub' }, { value: 'remote', label: 'Remote' }]} />
+        <div className="place-toggle">
+          <span className={place === 'hub' ? 'on' : ''} aria-hidden="true">In the hub</span>
+          <button
+            type="button" role="switch" className="switch" aria-checked={place === 'remote'} aria-label="Working remotely"
+            onClick={() => setPlace(place === 'remote' ? 'hub' : 'remote')}
+          ><span /></button>
+          <span className={place === 'remote' ? 'on' : ''} aria-hidden="true">Remote</span>
+        </div>
         <div className="inline" style={{ flexWrap: 'nowrap' }}>
           <label className="sr-only" htmlFor="log-project">Project</label>
-          <select id="log-project" className="field" style={{ flex: '1 1 auto', minWidth: 0, minHeight: 44 }} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          <select id="log-project" className="field select-plain" style={{ flex: '1 1 auto', minWidth: 0, minHeight: 40, fontSize: 14, borderWidth: 1.5, textAlign: 'left', textAlignLast: 'left', textOverflow: 'ellipsis' }} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             {state.projects.filter((p) => p.status === 'active').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <button type="button" className="btn btn-primary" onClick={startTimer}>{Icon.clock}Track time</button>
+          <button type="button" className="btn btn-outline btn-icon btn-thin" onClick={startTimer} aria-label="Track time" title="Track time">{Icon.clock}</button>
         </div>
         </>
       )}
 
       {!manualOpen ? (
-        <button type="button" className="btn btn-quiet btn-sm" style={{ alignSelf: 'flex-start', color: 'var(--blue)' }} onClick={() => { setManualOpen(true); setManualError(''); }}>
-          Forgot to track? Add time manually
-        </button>
+        <p className="small muted">
+          Forgot to track?{' '}
+          <button type="button" className="link-btn" onClick={() => { setManualOpen(true); setManualError(''); }}>Add time manually</button>
+        </p>
       ) : (
         <div className="stack" style={{ padding: 14, borderRadius: 12, background: 'var(--surface-2)' }}>
           <div className="inline" style={{ alignItems: 'flex-end' }}>

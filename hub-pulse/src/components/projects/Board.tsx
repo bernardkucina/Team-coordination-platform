@@ -5,7 +5,7 @@ import { useStore } from '@/lib/store';
 import type { Project, Task, TaskStatus } from '@/lib/types';
 import { DEMO_TODAY, shortDate } from '@/lib/time';
 import { Avatar } from '../ui';
-import { BOARD_COLUMNS, STATUS_NAME, isMine, type ChangeTask, type DragState } from './shared';
+import { BOARD_COLUMNS, STATUS_NAME, type ChangeTask, type DragState } from './shared';
 
 interface Props {
   /** One project, or several when "All projects" is picked. */
@@ -18,12 +18,12 @@ interface Props {
   startDrag: (e: DragEvent, task: Task) => void;
   endDrag: () => void;
   open: (task: Task) => void;
+  openProject: (project: Project) => void;
   change: ChangeTask;
 }
 
-export function Board({ projects, tasks, mineOnly, drag, over, setOver, startDrag, endDrag, open, change }: Props) {
-  const { state, me, memberName } = useStore();
-  const many = projects.length > 1;
+export function Board({ projects, tasks, mineOnly, drag, over, setOver, startDrag, endDrag, open, openProject, change }: Props) {
+  const { state, memberName } = useStore();
 
   const drop = (e: DragEvent, project: Project, workstream: string, status: TaskStatus) => {
     e.preventDefault();
@@ -43,7 +43,7 @@ export function Board({ projects, tasks, mineOnly, drag, over, setOver, startDra
       <table className="board">
         <thead>
           <tr>
-            <th style={{ width: 160, color: 'var(--muted)' }}>Area</th>
+            <th style={{ width: 160, color: 'var(--muted)' }}>Project / task</th>
             {BOARD_COLUMNS.map((s) => (
               <th key={s} style={{ width: s === 'idea' ? 150 : undefined, background: s === 'idea' ? 'var(--line-soft)' : s === 'done' ? 'var(--mint)' : 'var(--blue-soft)', color: s === 'idea' ? 'var(--muted)' : 'var(--ink)' }}>
                 {STATUS_NAME[s]} <span style={{ opacity: 0.75 }}>{tasks.filter((t) => t.status === s).length}</span>
@@ -54,16 +54,18 @@ export function Board({ projects, tasks, mineOnly, drag, over, setOver, startDra
         <tbody>
           {projects.map((project) => (
             <Fragment key={project.id}>
-              {many ? (
+              {(
                 <tr>
                   <th colSpan={BOARD_COLUMNS.length + 1} style={{ background: 'var(--surface-2)', padding: '10px 12px', borderTop: '2px solid var(--line)' }}>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>{project.name}</span>
-                    <span className="tiny muted" style={{ marginLeft: 8, fontWeight: 500 }}>
-                      {tasks.filter((t) => t.projectId === project.id && t.status !== 'done' && t.status !== 'idea').length} open
-                    </span>
+                    <button type="button" className="board-project" onClick={() => openProject(project)} aria-label={`Open ${project.name} as a list`}>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{project.name}</span>
+                      <span className="tiny muted" style={{ marginLeft: 8, fontWeight: 500 }}>
+                        {tasks.filter((t) => t.projectId === project.id && t.status !== 'done' && t.status !== 'idea').length} open · see all tasks →
+                      </span>
+                    </button>
                   </th>
                 </tr>
-              ) : null}
+              )}
               {project.workstreams.map((w) => {
                 const openCount = state.tasks.filter((t) => t.projectId === project.id && t.workstream === w.name && t.status !== 'done' && t.status !== 'idea').length;
                 return (
@@ -100,20 +102,21 @@ export function Board({ projects, tasks, mineOnly, drag, over, setOver, startDra
                                   onDragStart={(e) => startDrag(e, t)}
                                   onDragEnd={endDrag}
                                   style={{
-                                    background: w.color,
-                                    color: w.color,
-                                    outline: !mineOnly && isMine(t, me.id) ? '2px solid var(--blue)' : 'none',
-                                    outlineOffset: 1,
+                                    background: t.status === 'idea' ? 'var(--line-soft)' : w.color,
+                                    color: t.status === 'idea' ? 'var(--line-soft)' : w.color,
                                     opacity: drag?.taskId === t.id ? 0.4 : 1,
                                   }}
                                 >
                                   <button type="button" onClick={() => open(t)} aria-label={`${t.title}, owner ${memberName(t.owner)}`}>
-                                    <span className="t">{t.title}</span>
+                                    <span className="t">
+                                      {t.priority === 'High' ? <span className="prio-dot" title="High priority" aria-label="High priority" /> : null}
+                                      {t.title}
+                                    </span>
                                     <span className="between" style={{ width: '100%', alignItems: 'center', flexWrap: 'nowrap' }}>
                                       <span className="faces">
-                                        {faces.length ? faces.map((id, i) => {
+                                        {faces.length ? faces.map((id) => {
                                           const m = state.members.find((x) => x.id === id);
-                                          return <Avatar key={id} small initials={m?.initials ?? '?'} style={{ background: i === 0 ? 'var(--navy)' : '#fff', color: i === 0 ? '#fff' : 'var(--navy)' }} />;
+                                          return <Avatar key={id} small initials={m?.initials ?? '?'} style={{ background: 'var(--surface)', color: 'var(--ink)' }} />;
                                         }) : <Avatar small initials="?" style={{ background: '#fff', color: 'var(--bad)' }} />}
                                       </span>
                                       {t.due ? <span style={{ fontSize: 11, fontWeight: 700, color: late ? 'var(--bad)' : 'var(--ink-2)' }}>{late ? 'Late · ' : ''}{shortDate(t.due)}</span> : null}

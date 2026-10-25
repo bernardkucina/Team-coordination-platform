@@ -391,3 +391,34 @@ export const DEMO_MEMBER_HISTORY: PastProject[] = [
   { name: 'Academy Project', when: 'Jun 2026 to now', role: 'Kandidati + Mobilnost (EYE)', hours: 58, tasks: 9, active: true },
   { name: 'Shape Talk sezona 2025/26', when: 'Sep 2025 to Jun 2026', role: 'Priprava trditev', hours: 41, tasks: 10, active: false },
 ];
+
+/** One short line per project for the overview cards. Projects added later fall back to their description. */
+export const PROJECT_TAGLINES: Record<string, string> = {
+  p01: 'Delavnice in debate za dijake pri predmetu aktivno državljanstvo.',
+  p02: 'Moderirane debate za mlade o družbeno pomembnih temah.',
+  p03: 'Brezplačna večdnevna podjetniška šola za mlade vsako poletje.',
+  p04: 'Mesečni pogovori z gosti iz podjetništva in tehnologije.',
+  p05: 'Vikend delavnice o AI, od promptinga do vibe codinga.',
+  p06: 'Dvakrat na leto se srečamo s partnerji in se jim zahvalimo.',
+  p07: 'Podjetjem poiščemo mlade talente iz naše mreže.',
+  academy: 'Mlade talente pripravimo s programom in jih umestimo v podjetja.',
+};
+
+/* ---------- Teambuildings ---------- */
+
+/**
+ * The sandbox calendar has no teambuildings yet. In the real app they come from Google Calendar like any
+ * other series; for the demo there are three past Saturday events with made-up, stable attendance.
+ */
+export const TEAMBUILDING_SERIES = 'teambuilding';
+const TB_DATES = ['2026-09-19', '2026-10-03', '2026-10-17'];
+SERIES.push({ id: TEAMBUILDING_SERIES, name: 'Teambuilding', projectId: null, invited: sandbox.members.map((m) => m.id) });
+for (const date of TB_DATES) {
+  const id = `${TEAMBUILDING_SERIES}-${date.replace(/-/g, '')}`;
+  MEETINGS.push({ id, seriesId: TEAMBUILDING_SERIES, date, start: '10:00', end: '14:00', recorded: true });
+  for (const m of sandbox.members) {
+    const r = seeded(m.id + id);
+    const keen = 0.45 + seeded(m.id + 'tb') * 0.5;
+    ATTENDANCE.push({ meetingId: id, memberId: m.id, status: r < keen ? 'present' : r < keen + 0.15 ? 'excused' : 'missed', source: 'admin' });
+  }
+}

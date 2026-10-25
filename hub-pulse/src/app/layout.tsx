@@ -6,7 +6,7 @@ import { Toast } from '@/components/ui';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Hub Pulse',
+  title: 'Shapers Hub',
   description: 'Tasks, hours and attendance for a Global Shapers hub.',
 };
 

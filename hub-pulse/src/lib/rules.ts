@@ -1,6 +1,6 @@
 import type { AttendanceRecord, Meeting, MeetingSeries, Member, Task, TimeEntry } from './types';
 import { TIER_HOURS } from './types';
-import { CURRENT_WEEK, DEMO_TODAY, WEEK_PACE, toMin, weekOf } from './time';
+import { CURRENT_WEEK, DEMO_TODAY, WEEK_PACE, dateInWeek, toMin, weekOf } from './time';
 
 /** Pretend clock for the demo: Shapers Voice (19:00–20:00) is happening. */
 export const DEMO_NOW = '19:10';
@@ -104,4 +104,42 @@ export const attendanceStats = (
   const base = stats.invited - stats.excused;
   stats.rate = base > 0 ? Math.round(((stats.present + stats.remote) / base) * 100) : null;
   return stats;
+};
+
+export type DayHours = Map<string, { hub: number; remote: number }>;
+
+/**
+ * Hours per day for one member. This week's days come from the logged entries; earlier weeks only have
+ * weekly totals in the sandbox, so the demo spreads each week over its first few weekdays.
+ */
+export const dailyHours = (member: Member, entries: TimeEntry[], tasks: Task[]): DayHours => {
+  const SPREAD = [0, 2, 1, 3, 4];
+  const perDay: DayHours = new Map();
+  for (const w of memberWeeks(member, entries, tasks)) {
+    if (w.current) continue;
+    const days = w.hours > 0 ? Math.min(5, Math.max(1, Math.round(w.hours / 2.5))) : 0;
+    for (let k = 0; k < days; k++) perDay.set(dateInWeek(w.week, SPREAD[k]), { hub: w.hub / days, remote: w.remote / days });
+  }
+  for (const e of entries.filter((x) => x.memberId === member.id)) {
+    const h = (toMin(e.end) - toMin(e.start)) / 60;
+    const d = perDay.get(e.date) ?? { hub: 0, remote: 0 };
+    perDay.set(e.date, e.place === 'hub' ? { ...d, hub: d.hub + h } : { ...d, remote: d.remote + h });
+  }
+  return perDay;
+};
+
+/** Adds several members' day maps together. */
+export const sumDays = (maps: DayHours[]): DayHours => {
+  const out: DayHours = new Map();
+  for (const m of maps) for (const [d, v] of m) {
+    const o = out.get(d) ?? { hub: 0, remote: 0 };
+    out.set(d, { hub: o.hub + v.hub, remote: o.remote + v.remote });
+  }
+  return out;
+};
+
+/** Every date of the current month, built from strings so a clock change can't skip a day. */
+export const currentMonthDays = (): string[] => {
+  const [yy, mm] = DEMO_TODAY.split('-').map(Number);
+  return Array.from({ length: new Date(yy, mm, 0).getDate() }, (_, k) => `${DEMO_TODAY.slice(0, 8)}${String(k + 1).padStart(2, '0')}`);
 };
