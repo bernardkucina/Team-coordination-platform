@@ -29,5 +29,11 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Claude Code: personal settings (shared skills stay in git)
-.claude/settings.local.json
+# AI tool folders (installed locally, not part of the app)
+.claude/
+.agents/
+skills-lock.json
+
+# Hackathon logistics from the organisers, not used by the app
+material/Mentor slots*
+material/SCHEDULE.docx
