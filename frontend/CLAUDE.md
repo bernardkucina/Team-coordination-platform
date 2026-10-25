@@ -36,6 +36,10 @@ npm run build
 
 Add new requests at the top in the same format. Mark them `[x]` when done and say what was built.
 
+### 25 Oct 2026
+
+- [x] **Meeting reminders without Slack.** `MeetingReminder` (in the root layout, so on every page) shows a banner when one of your meetings opens for clock-in and you have not answered: **Clock in**, **Joining remotely**, **Not now**. With browser notifications allowed (**Turn on** at the bottom of the meetings card) it also notifies once per meeting. Only while the app is open; Slack covers the rest.
+
 ### 24 Oct 2026, round 2
 
 **Today: member**

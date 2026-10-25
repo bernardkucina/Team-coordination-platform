@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { StoreProvider } from '@/lib/store';
+import { MeetingReminder } from '@/components/MeetingReminder';
 import { Sidebar } from '@/components/Sidebar';
 import { Toast } from '@/components/ui';
 import './globals.css';
@@ -21,7 +22,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="shell">
             <Sidebar />
             <main className="main">
-              <div className="container">{children}</div>
+              <div className="container">
+                <MeetingReminder />
+                {children}
+              </div>
             </main>
           </div>
           <Toast />

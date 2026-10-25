@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store';
 import { meetingPhase } from '@/lib/rules';
 import { DEMO_TODAY, addDays, dayLabel, durText, toMin, whenText } from '@/lib/time';
 import type { AttendanceStatus, Meeting } from '@/lib/types';
+import { ReminderToggle } from './MeetingReminder';
 import { useTrackingActions } from './Tracking';
 import { Icon } from './ui';
 
@@ -126,6 +127,7 @@ export function TodayMeetings() {
           );
         })}
       </ul>
+      <ReminderToggle />
       {all.length > today.length ? (
         <span className="tiny muted">
           {all.length - today.length} more {isAdmin ? 'today, see' : 'coming up'}{isAdmin ? <> <Link href="/team?tab=attendance">Team › Attendance</Link></> : null}
