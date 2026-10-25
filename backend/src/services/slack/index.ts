@@ -7,7 +7,7 @@ import { getMember } from '../members';
 import { listProjects, getTask } from '../tasks';
 import { config } from '../../core/config';
 import { slackEnabled } from './client';
-import { addedMessage } from './blocks';
+import { addedMessage, missedMessage } from './blocks';
 import { sendDm } from './users';
 import { resyncMember, scheduleMeetingMessages } from './schedule';
 
@@ -32,6 +32,12 @@ export const registerSlackListeners = (): void => {
 
   on('attendance.self', async (e) => {
     await resyncMember(e.meetingId, e.memberId);
+  });
+
+  on('attendance.missed', async (e) => {
+    if (!slackEnabled()) return;
+    const day = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    await sendDm(e.memberId, missedMessage({ series: e.series, when: day(e.date), due: day(e.dueOn) }, config.appUrl));
   });
 
   on('calendar.synced', async () => {

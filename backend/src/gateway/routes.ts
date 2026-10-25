@@ -9,7 +9,9 @@ import { localParts, now } from '../core/clock';
 import { getMember, listMembers, toMember } from '../services/members';
 import { listProjects, listTasks } from '../services/tasks';
 import { calendarStatus, listMeetingRows, listSeries, syncIfStale, toMeeting } from '../services/meetings';
-import { listRecords } from '../services/attendance';
+import { listMakeups, listRecords } from '../services/attendance';
+import { clientIp } from '../core/network';
+import { hubNetwork } from '../services/members';
 import { getTimers, listEntries } from '../services/hours';
 import { memberStats } from '../services/analytics';
 
@@ -36,7 +38,7 @@ gatewayRouter.get('/bootstrap', async (req, res) => {
   const user = me(req);
   // Meetings come from the calendar: refresh our copy first when it is older than CALENDAR_SYNC_MINUTES.
   await syncIfStale();
-  const [members, projects, tasks, series, meetingRows, attendance, timeEntries, timers] = await Promise.all([
+  const [members, projects, tasks, series, meetingRows, attendance, timeEntries, timers, network, makeups] = await Promise.all([
     memberProfiles(),
     listProjects(),
     listTasks(),
@@ -45,6 +47,8 @@ gatewayRouter.get('/bootstrap', async (req, res) => {
     listRecords(),
     listEntries(user.isAdmin ? {} : { memberId: user.id }),
     getTimers(user.id),
+    hubNetwork(clientIp(req)),
+    listMakeups(user.isAdmin ? undefined : user.id),
   ]);
   const meProfile = members.find((m) => m.id === user.id) ?? toMember(await getMember(user.id));
   const body: AppData = {
@@ -60,6 +64,8 @@ gatewayRouter.get('/bootstrap', async (req, res) => {
     timeEntries,
     tracking: timers.tracking,
     workTimer: timers.workTimer,
+    network,
+    makeups,
     ...(user.isAdmin && { calendar: await calendarStatus() }),
   };
   res.json(body);

@@ -3,4 +3,5 @@ export { membersRouter } from './routes';
 export {
   listMembers, getMember, assertMembersExist, createMember, setAccess, findMemberBySlackUserId, setSlackUserId, setSlackEmail,
 } from './service';
+export { hubWifi, addHubAddress, removeHubAddress, hubNetwork } from './hub';
 export { toMember, tierName, tierFromName, tierFromRoster, commitmentOf, memberIdFromEmail, initialsOf, type MemberStats } from './mapping';

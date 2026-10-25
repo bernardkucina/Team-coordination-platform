@@ -1,6 +1,8 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { me } from '../../core/auth';
+import { clientIp } from '../../core/network';
+import { hubNetwork } from '../members';
 import { badRequest, forbidden } from '../../core/errors';
 import { clockTime, id, isoDate, parse } from '../../core/validate';
 import { createEntry, deleteEntry, hoursSummary, listEntries, updateEntry } from './service';
@@ -37,8 +39,21 @@ const createSchema = z.object({
   memberId: id.optional(),
 });
 
+/**
+ * "In the hub" only from the Impact Hub wifi, for your own time. Admins correcting someone else's hours are not
+ * checked. Off while no hub address is saved.
+ */
+const assertHubAllowed = async (req: Request, where: 'hub' | 'remote' | undefined): Promise<void> => {
+  if (where !== 'hub') return;
+  const network = await hubNetwork(clientIp(req));
+  if (network.checked && !network.atHub) throw forbidden('"In the hub" is only available on the Impact Hub wifi. Log it as remote.');
+};
+
 hoursRouter.post('/time-entries', async (req, res) => {
-  res.status(201).json(await createEntry(parse(createSchema, req.body), me(req)));
+  const body = parse(createSchema, req.body);
+  const user = me(req);
+  if (!body.memberId || body.memberId === user.id) await assertHubAllowed(req, body.location);
+  res.status(201).json(await createEntry(body, user));
 });
 
 const updateSchema = z
@@ -47,7 +62,10 @@ const updateSchema = z
   .strict();
 
 hoursRouter.patch('/time-entries/:id', async (req, res) => {
-  res.json(await updateEntry(entryId(req.params.id), parse(updateSchema, req.body), me(req)));
+  const patch = parse(updateSchema, req.body);
+  const user = me(req);
+  if (!user.isAdmin) await assertHubAllowed(req, patch.location);
+  res.json(await updateEntry(entryId(req.params.id), patch, user));
 });
 
 hoursRouter.delete('/time-entries/:id', async (req, res) => {
@@ -74,6 +92,7 @@ hoursRouter.get('/timers', async (req, res) => {
 
 hoursRouter.post('/timers/work/start', async (req, res) => {
   const { projectId, location: where } = parse(z.object({ projectId: id, location: location.optional() }), req.body);
+  await assertHubAllowed(req, where);
   res.json(await startWork(me(req), projectId, where));
 });
 

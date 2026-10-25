@@ -10,6 +10,8 @@ export interface DomainEvents {
   'project.memberAdded': { memberId: string; actorId: string; projectId: string; taskId?: number; role: 'owner' | 'helper' | 'lead' };
   /** A member's own attendance changed: clocked in, said they can't come, took it back, or answered afterwards. */
   'attendance.self': { meetingId: string; memberId: string; status: 'present' | 'remote' | 'excused' | 'cleared' };
+  /** A member missed a meeting and now owes a General task (make-up duty). */
+  'attendance.missed': { meetingId: string; memberId: string; series: string; date: string; dueOn: string };
   /** The calendar copy changed (sync or seed). */
   'calendar.synced': Record<string, never>;
 }

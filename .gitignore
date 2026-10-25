@@ -1,7 +1,33 @@
+# Dependencies
 node_modules/
-.env
-.env.local
-*.tsbuildinfo
-.DS_Store
 
+# Build output
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets: local env files (the examples and frontend/.env.development stay in git)
+.env
+.env.*
+!.env.example
+!.env.development
+
+# Vercel CLI link and pulled env files
 .vercel
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Claude Code: personal settings (shared skills stay in git)
+.claude/settings.local.json

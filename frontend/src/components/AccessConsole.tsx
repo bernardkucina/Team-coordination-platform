@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { TIER_HOURS, type AccessMember, type Role, type Tier } from '@hub-pulse/shared';
+import { TIER_HOURS, type HubWifiResponse, type AccessMember, type Role, type Tier } from '@hub-pulse/shared';
 import { api } from '@/lib/api';
 import { Avatar, Icon, Toggle } from './ui';
 
@@ -123,6 +123,8 @@ export function AccessConsole({ onSignOut }: { onSignOut: () => Promise<void> })
             </div>
           </form>
 
+          <HubWifi />
+
           <section className="card" aria-labelledby="people-h">
             <div className="between">
               <h2 id="people-h">People</h2>
@@ -236,5 +238,45 @@ function AccessMenu({ onSignOut }: { onSignOut: () => Promise<void> }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Where members may log time "in the hub": the Impact Hub wifi's public addresses. Off until one is saved. */
+function HubWifi() {
+  const [wifi, setWifi] = useState<HubWifiResponse | null>(null);
+  const [error, setError] = useState('');
+  const run = (call: Promise<HubWifiResponse>) => call.then((w) => { setWifi(w); setError(''); }).catch((e: unknown) => setError(e instanceof Error ? e.message : 'Could not save.'));
+  useEffect(() => { void run(api.hubWifi()); }, []);
+  if (!wifi) return null;
+  const all = [...wifi.fromConfig, ...wifi.addresses.map((a) => a.ip)];
+  const here = all.includes(wifi.current);
+
+  return (
+    <section className="card" aria-labelledby="wifi-h">
+      <div className="between" style={{ alignItems: 'center' }}>
+        <h2 id="wifi-h">Hub wifi</h2>
+        <span className={all.length ? 'pill good' : 'pill neutral'}>{all.length ? 'Check on' : 'Check off'}</span>
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>
+        Members can log time &quot;in the hub&quot; only from these internet addresses; anywhere else it is remote only.
+        {all.length ? '' : ' None is saved yet, so everyone can choose "in the hub". Save the address while you are on the Impact Hub wifi.'}
+      </p>
+      <div className="between" style={{ alignItems: 'center', gap: 12 }}>
+        <span className="small">You are on <strong>{wifi.current}</strong>{here ? ' (the hub wifi)' : ''}</span>
+        {here ? null : <button type="button" className="btn btn-primary btn-sm" onClick={() => void run(api.addHubWifi())}>Save as hub wifi</button>}
+      </div>
+      {all.length ? (
+        <ul className="stack" style={{ gap: 6, listStyle: 'none', margin: 0, padding: 0 }}>
+          {wifi.fromConfig.map((ip) => <li key={ip} className="small">{ip} <span className="tiny muted">· set in HUB_IPS</span></li>)}
+          {wifi.addresses.map((a) => (
+            <li key={a.ip} className="between small" style={{ alignItems: 'center' }}>
+              <span>{a.ip}</span>
+              <button type="button" className="btn btn-quiet btn-sm" onClick={() => void run(api.removeHubWifi(a.ip))}>Remove</button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {error ? <span className="small" role="alert" style={{ color: 'var(--bad)' }}>{error}</span> : null}
+    </section>
   );
 }

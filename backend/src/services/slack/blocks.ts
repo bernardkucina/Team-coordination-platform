@@ -44,6 +44,19 @@ export const followupMessage = (m: { meetingId: string; series: string; when: st
   };
 };
 
+/** You missed a meeting: pick a General task to make up for it. */
+export const missedMessage = (m: { series: string; when: string; due: string }, appUrl: string) => {
+  const text = `You missed ${m.series} (${m.when}). Pick a General task by ${m.due}.`;
+  return {
+    text,
+    blocks: [
+      section(`:wave: You missed *${m.series}* (${m.when}).
+To make up for it, pick one *General task* by *${m.due}*.`),
+      { type: 'actions', elements: [linkButton('Pick a General task', `${appUrl}/today`)] },
+    ],
+  };
+};
+
 /** The form that asks why someone could not come. */
 export const reasonModal = (meta: { meetingId: string; responseUrl: string }, series: string) => ({
   type: 'modal',

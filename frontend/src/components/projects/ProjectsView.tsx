@@ -3,7 +3,7 @@
 import { useEffect, useState, type DragEvent } from 'react';
 import { api } from '@/lib/api';
 import { useStore } from '@/lib/store';
-import { AREAS, areaById } from '@/lib/types';
+import { AREAS, GENERAL_PROJECT, areaById } from '@/lib/types';
 import type { AreaId, Task } from '@/lib/types';
 import { Avatar, Toggle } from '../ui';
 import { Board } from './Board';
@@ -27,7 +27,7 @@ export function ProjectsView({ projectId, onProjectId }: { projectId: string; on
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingName, setPendingName] = useState<string | null>(null);
 
-  const activeProjects = state.projects.filter((p) => p.status === 'active' && p.id !== 'ops');
+  const activeProjects = state.projects.filter((p) => p.status === 'active' && p.id !== 'ops' && p.id !== GENERAL_PROJECT);
 
   // Picking one project (here or from the overview) opens its task list beside the board.
   useEffect(() => { setPanelProject(projectId === ALL_PROJECTS ? null : projectId); }, [projectId]);

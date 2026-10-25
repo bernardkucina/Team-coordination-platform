@@ -34,19 +34,61 @@ export function useTrackingActions() {
   return { start, stop };
 }
 
+/**
+ * The big "Track time" button on Today.
+ * - While one of your meetings is open for clock-in (10 min before it starts until it ends): clocks you in to it.
+ * - Otherwise: starts a work timer (in the hub) on your project; it shows in the hours card, where you stop and log it.
+ * Once clicked, the button turns into a running timer with "Stop and log" (a meeting being tracked shows the
+ * tracking banner below instead).
+ */
 export function TrackMeetingButton() {
-  const { state } = useStore();
+  const { state, dispatch, me, flash } = useStore();
   const live = useLiveMeeting();
   const { start } = useTrackingActions();
+  const timer = state.workTimer && state.workTimer.memberId === me.id ? state.workTimer : null;
+  const elapsed = useElapsed(timer?.startedAt ?? null);
   if (state.tracking) return null;
+
+  if (timer) {
+    const name = state.projects.find((p) => p.id === timer.projectId)?.name ?? '';
+    const clock = `${pad(Math.floor(elapsed / 3600))}:${pad(Math.floor((elapsed % 3600) / 60))}:${pad(elapsed % 60)}`;
+    const stopWork = () => {
+      const end = nowHM();
+      dispatch({ type: 'stopWork', end });
+      flash(`Logged ${timer.at} – ${end} on ${name}`);
+    };
+    return (
+      <div className="track-timer" role="timer" aria-label={`Tracking time on ${name} for ${durText(Math.floor(elapsed / 60))}`}>
+        <span className="track-dot" aria-hidden="true" />
+        <span className="stack" style={{ gap: 0 }}>
+          <span className="track-clock">{clock}</span>
+          <span className="tiny" style={{ color: 'var(--on-dark-muted)' }}>{name} · since {timer.at}</span>
+        </span>
+        <button type="button" className="btn btn-light btn-sm" onClick={stopWork}>Stop and log</button>
+      </div>
+    );
+  }
+
+  const series = live ? state.series.find((s) => s.id === live.seriesId) : undefined;
+  const active = state.projects.filter((p) => p.status === 'active');
+  const project = active.find((p) => p.lead === me.id || p.members.includes(me.id)) ?? active.find((p) => p.id === 'ops') ?? active[0];
+
+  const onClick = () => {
+    if (live) return start(live);
+    if (!project) return flash('There is no active project to track time on.');
+    const where = !state.network.checked || state.network.atHub ? 'hub' : 'remote';
+    dispatch({ type: 'startWork', timer: { memberId: me.id, projectId: project.id, at: nowHM(), startedAt: Date.now(), location: where } });
+    flash(`Tracking time on ${project.name}, ${where === 'hub' ? 'in the hub' : 'remote'}.`);
+  };
+
   return (
     <button
       type="button" className="btn btn-primary" style={{ minHeight: 48, fontSize: 15, fontWeight: 700 }}
-      disabled={!live} title={live ? undefined : 'No meeting is happening right now'}
-      onClick={() => live && start(live)}
+      title={live ? `Clock in to ${series?.name ?? 'the meeting'}` : project ? `Start a timer on ${project.name}` : undefined}
+      onClick={onClick}
     >
       {Icon.clock}
-      Track time
+      {live ? `Track ${series?.name ?? 'meeting'}` : 'Track time'}
     </button>
   );
 }

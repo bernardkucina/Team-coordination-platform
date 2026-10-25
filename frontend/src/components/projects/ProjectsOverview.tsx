@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { AREAS, areaById } from '@/lib/types';
+import { AREAS, GENERAL_PROJECT, areaById } from '@/lib/types';
 import type { AreaId, Project } from '@/lib/types';
 import { Avatar, Progress } from '../ui';
 
@@ -25,7 +25,7 @@ export function ProjectsOverview({ onOpen }: { onOpen: (projectId: string) => vo
     return [...ids];
   };
   // Hub Operations (ops) only collects time outside projects; it is not a project people join.
-  const activeProjects = state.projects.filter((p) => p.status === 'active' && p.id !== 'ops');
+  const activeProjects = state.projects.filter((p) => p.status === 'active' && p.id !== 'ops' && p.id !== GENERAL_PROJECT);
   const plannedProjects = state.projects.filter((p) => p.status === 'planned');
   const myProjects = activeProjects.filter((p) => teamOf(p).includes(me.id));
   const shown = activeProjects

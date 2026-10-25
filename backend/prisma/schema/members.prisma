@@ -49,6 +49,14 @@ model MemberArea {
   @@id([memberId, areaId])
 }
 
+/// Public internet addresses of the Impact Hub wifi. Only from these can members log time "in the hub".
+/// Saved by the super admin (plus HUB_IPS); with none saved, the check is off.
+model HubAddress {
+  ip        String   @id
+  label     String   @default("")
+  createdAt DateTime @default(now())
+}
+
 /// A signed-in browser: either a member, or the super admin (who is not a member and only manages access).
 model Session {
   id         String   @id

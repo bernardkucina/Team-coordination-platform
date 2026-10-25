@@ -18,6 +18,7 @@ import { registerSlackListeners, slackRouter } from './services/slack';
 import { gatewayRouter } from './gateway/routes';
 import { seedTeambuildings } from './seed/teambuildings';
 import { seedDemoTasks } from './seed/demo-tasks';
+import { seedGeneralTasks } from './seed/general-tasks';
 
 /**
  * Made-up sandbox data that is not in /material (teambuildings, open tasks for this week) is written to the database once per process,
@@ -31,6 +32,8 @@ const ensureDemoData = () =>
       if (tb.records) console.log(`Demo data: added ${tb.records} teambuilding attendance records`);
       const tasks = await seedDemoTasks();
       if (tasks) console.log(`Demo data: added ${tasks} open tasks for this week`);
+      const general = await seedGeneralTasks();
+      if (general.tasks || general.duties) console.log(`Demo data: added ${general.tasks} General tasks, ${general.duties} make-up duties`);
     } catch (err) {
       console.warn('Demo data: could not add it', err);
     }

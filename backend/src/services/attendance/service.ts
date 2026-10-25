@@ -7,6 +7,7 @@ import type { SessionMember } from '../../core/auth';
 import { getMeetingRow, getSeries, isInvited, setRecorded, toMeeting } from '../meetings';
 import { canClockIn, canExcuse, canReport } from './rules';
 import { emit } from '../../core/events';
+import { dropMakeup, ensureMakeup } from './makeup';
 
 export const toRecord = (r: DbRecord): AttendanceRecord => ({
   meetingId: r.meetingId,
@@ -83,6 +84,9 @@ export const reportAttendance = async (
     update: { status, source: 'self', reason: answer === 'absent' ? why : null },
   });
   await emit('attendance.self', { meetingId, memberId: member.id, status });
+  // "I didn't attend" means a make-up task, like an admin recording a no-show.
+  if (answer === 'absent') await ensureMakeup(meetingId, member.id);
+  else await dropMakeup(meetingId, member.id);
   return toRecord(record);
 };
 
@@ -103,6 +107,11 @@ export const recordMeeting = async (meetingId: string, input: BulkAttendanceRequ
     ),
     ...(input.recorded !== undefined ? [setRecorded(meetingId, input.recorded)] : []),
   ]);
+  // Missed means a make-up task; present again cancels one not yet picked. Excused leaves it as it is.
+  for (const r of input.records) {
+    if (r.status === 'missed') await ensureMakeup(meetingId, r.memberId);
+    else if (r.status !== 'excused') await dropMakeup(meetingId, r.memberId);
+  }
   return meetingDetail(meetingId);
 };
 

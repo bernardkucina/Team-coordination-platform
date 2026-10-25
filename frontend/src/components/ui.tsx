@@ -165,6 +165,11 @@ export const Icon = {
       <circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /><circle cx="17" cy="9" r="2.5" /><path d="M16.5 14.2c2.8.2 5 2.2 5 5.3" />
     </svg>
   ),
+  checklist: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3.5 6.5l1.8 1.8L8.5 5" /><path d="M3.5 13.5l1.8 1.8L8.5 12" /><path d="M12 7h9" /><path d="M12 14h9" /><path d="M4 20h4" /><path d="M12 20h9" />
+    </svg>
+  ),
   chart: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" />

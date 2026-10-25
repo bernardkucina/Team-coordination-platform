@@ -112,6 +112,7 @@ model Task {
   helpers TaskHelper[]
   links   TaskLink[]
   events  TaskEvent[]
+  makeups MakeupDuty[]
 
   @@index([projectId])
   @@index([ownerId])

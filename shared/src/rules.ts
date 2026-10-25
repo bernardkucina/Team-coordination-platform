@@ -2,6 +2,8 @@
 
 /** Members can log hours for today and this many days back. */
 export const MEMBER_LOG_DAYS_BACK = 1;
+/** Days after a missed meeting to pick a General task. */
+export const MAKEUP_DAYS = 14;
 /** Admins can log and edit hours this many days back. */
 export const ADMIN_LOG_DAYS_BACK = 6;
 /** Clock-in opens this many minutes before a meeting starts and stays open until it ends. */

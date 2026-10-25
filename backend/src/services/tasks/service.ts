@@ -1,6 +1,6 @@
 import type { TaskEventKind } from '@prisma/client';
 import {
-  areaById, type AddWorkstreamRequest, type AreaId, type CreateProjectRequest, type CreateTaskRequest, type Project, type Task,
+  areaById, GENERAL_PROJECT, type AddWorkstreamRequest, type AreaId, type CreateProjectRequest, type CreateTaskRequest, type Project, type Task,
   type UpdateTaskRequest,
 } from '@hub-pulse/shared';
 import { db } from '../../core/db';
@@ -133,7 +133,7 @@ export const joinProject = async (projectId: string, actor: SessionMember): Prom
 export const leaveProject = async (projectId: string, actor: SessionMember): Promise<Project> => {
   await loadProject(projectId);
   const mine = await db.projectMember.findMany({
-    where: { memberId: actor.id, project: { status: 'active', id: { not: OPS_PROJECT } } },
+    where: { memberId: actor.id, project: { status: 'active', id: { notIn: [OPS_PROJECT, GENERAL_PROJECT] } } },
     select: { projectId: true },
   });
   if (!mine.some((m) => m.projectId === projectId)) return toProject(await loadProject(projectId));

@@ -207,6 +207,28 @@ export interface Meeting {
   meetUrl?: string;
 }
 
+/** The project that holds General tasks: small jobs anyone can pick, e.g. to make up for a missed meeting. */
+export const GENERAL_PROJECT = 'general';
+
+/** A member missed a meeting and owes one General task, picked by `dueOn`. */
+export interface MakeupDuty {
+  meetingId: string;
+  memberId: string;
+  /** YYYY-MM-DD. */
+  dueOn: string;
+  /** The General task they picked; null while it is still owed. */
+  taskId: number | null;
+}
+
+/** Where this request comes from. Only on the Impact Hub wifi can members log time "in the hub". */
+export interface HubNetwork {
+  /** False when no hub wifi address is saved: then everyone may choose "in the hub". */
+  checked: boolean;
+  atHub: boolean;
+  /** The address the server sees. */
+  ip: string;
+}
+
 export interface AttendanceRecord {
   meetingId: string;
   memberId: string;

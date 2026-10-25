@@ -39,39 +39,51 @@ export function SignIn({ onSignIn }: { onSignIn: (email: string, password?: stri
     }
   };
 
+  const pickDemo = (demo: string) => {
+    setEmail(demo);
+    setError('');
+    setNeedsPassword(false);
+    setPassword('');
+  };
+
   return (
     <div className="signin">
-      <form className="card" style={{ width: 'min(420px, 100%)' }} aria-labelledby="signin-h" onSubmit={(e) => void submit(e)} noValidate>
-        <div className="brand" style={{ color: 'var(--ink)' }}>
+      <form className="card signin-card" aria-label="Sign in" onSubmit={(e) => void submit(e)} noValidate>
+        <div className="signin-brand">
           <span className="brand-mark">{Icon.hub}</span>
-          <span><strong>Shapers Hub</strong></span>
+          <strong>Shapers Hub</strong>
         </div>
-        <h1 id="signin-h" style={{ fontSize: 24 }}>Sign in</h1>
-        <div className="stack" style={{ gap: 6 }}>
-          <label className="label" htmlFor="signin-email">Email</label>
+        <div className="stack" style={{ gap: 8 }}>
+          <label className="signin-label" htmlFor="signin-email">Email</label>
           <input
-            id="signin-email" className="field" type="email" autoComplete="username" autoFocus
+            id="signin-email" className="field signin-field" type="email" autoComplete="username" autoFocus
             placeholder="name.surname@sandbox.example" value={email}
             onChange={(e) => { setEmail(e.target.value); setError(''); setNeedsPassword(false); setPassword(''); }}
             aria-invalid={!!error && !needsPassword} aria-describedby={error ? 'signin-error' : 'signin-hint'}
           />
         </div>
         {needsPassword ? (
-          <div className="stack" style={{ gap: 6 }}>
-            <label className="label" htmlFor="signin-password">Password</label>
+          <div className="stack" style={{ gap: 8 }}>
+            <label className="signin-label" htmlFor="signin-password">Password</label>
             <input
-              id="signin-password" ref={passwordRef} className="field" type="password" autoComplete="current-password"
+              id="signin-password" ref={passwordRef} className="field signin-field" type="password" autoComplete="current-password"
               value={password} onChange={(e) => { setPassword(e.target.value); setError(''); }}
               aria-invalid={!!error} aria-describedby={error ? 'signin-error' : undefined}
             />
           </div>
         ) : null}
-        {error
-          ? <span id="signin-error" className="small" role="alert" style={{ color: 'var(--bad)' }}>{error}</span>
-          : <span id="signin-hint" className="tiny muted">Demo: use a roster email, e.g. ana.kovac@sandbox.example (admin) or ziga.krajnc@sandbox.example.</span>}
-        <button type="submit" className="btn btn-primary" disabled={busy} style={{ minHeight: 44 }}>
+        {error ? <span id="signin-error" className="small" role="alert" style={{ color: 'var(--bad)' }}>{error}</span> : null}
+        <button type="submit" className="btn btn-primary signin-btn" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
+        <div id="signin-hint" className="signin-demo">
+          <span className="signin-demo-title">Demo accounts</span>
+          <div className="inline" style={{ gap: 6 }}>
+            <button type="button" className="signin-chip" onClick={() => pickDemo('ana.kovac@sandbox.example')}>Ana Kovač · admin</button>
+            <button type="button" className="signin-chip" onClick={() => pickDemo('ziga.krajnc@sandbox.example')}>Žiga Krajnc · member</button>
+          </div>
+          <span className="tiny muted">Or type any roster email.</span>
+        </div>
       </form>
     </div>
   );

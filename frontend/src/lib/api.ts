@@ -6,7 +6,7 @@ import type {
   AccessMember, AddWorkstreamRequest, AppData, AreaId, MemberAreasResponse, ApiError, BulkAttendanceRequest, CreateAccessMemberRequest, CreateProjectRequest,
   AttendanceReportRequest, CalendarSyncStatus, CreateTaskRequest, CreateTimeEntryRequest, LoginResponse, MeetingDetail,
   MemberAnalyticsRow, SessionInfo, SlackRunRequest, SlackStatus, UpdateAccessRequest, Project, SelfAttendanceRequest, Task, TimeEntry,
-  TimersResponse, UpdateTaskRequest, UpdateTimeEntryRequest,
+  TimersResponse, UpdateTaskRequest, UpdateTimeEntryRequest, HubWifiResponse, MakeupDuty,
 } from '@hub-pulse/shared';
 
 export class ApiFailure extends Error {
@@ -67,5 +67,9 @@ export const api = {
   addAccessMember: (body: CreateAccessMemberRequest) => request<AccessMember>('POST', '/access/members', body),
   updateAccess: (id: string, body: UpdateAccessRequest) => request<AccessMember>('PATCH', `/access/members/${encodeURIComponent(id)}`, body),
 
+  takeMakeup: (meetingId: string, taskId: number) => request<MakeupDuty>('POST', `/makeups/${encodeURIComponent(meetingId)}/take`, { taskId }),
+  hubWifi: () => request<HubWifiResponse>('GET', '/access/hub-wifi'),
+  addHubWifi: (ip?: string) => request<HubWifiResponse>('POST', '/access/hub-wifi', ip ? { ip } : {}),
+  removeHubWifi: (ip: string) => request<HubWifiResponse>('DELETE', `/access/hub-wifi/${encodeURIComponent(ip)}`),
   fillPresent: (meetingId: string) => request<MeetingDetail>('POST', `/meetings/${encodeURIComponent(meetingId)}/attendance/fill-present`),
 };

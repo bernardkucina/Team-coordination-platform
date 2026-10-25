@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import type {
-  AppData, AreaId, AttendanceRecord, AttendanceStatus, CalendarSyncStatus, HistoryEntry, Meeting, MeetingSeries, Member, Project,
+  AppData, AreaId, AttendanceRecord, AttendanceStatus, CalendarSyncStatus, HistoryEntry, HubNetwork, MakeupDuty, Meeting, MeetingSeries, Member, Project,
   ProjectRole, Role, Task, TimeEntry, Tracking, UpdateTaskRequest, WorkTimer,
 } from './types';
 import { areaById } from './types';
@@ -26,6 +26,10 @@ export interface AppState {
   workTimer: WorkTimer | null;
   /** Admins only: the last calendar sync. */
   calendar: CalendarSyncStatus | null;
+  /** Whether this browser is on the hub wifi ("in the hub" is only allowed there). */
+  network: HubNetwork;
+  /** Make-up duties for missed meetings: your own, or everyone's for admins. */
+  makeups: MakeupDuty[];
   /** Id of the time entry that was just added or edited, to highlight it. */
   lastEntryId: number | null;
   /** Id for the next optimistic change. Negative, so it never clashes with the server's ids. */
@@ -58,6 +62,8 @@ export type Action =
   /** A task the server already created (shown at once; nothing more to save). */
   | { type: 'taskCreated'; task: Task }
   | { type: 'reorderTasks'; ids: number[] }
+  /** Pick a General task for a missed meeting: you become its owner. */
+  | { type: 'takeMakeup'; meetingId: string; taskId: number; who: string }
   | { type: 'startWork'; timer: WorkTimer }
   | { type: 'stopWork'; end: string }
   | { type: 'addProject'; project: NewProject; who: string }
@@ -97,6 +103,8 @@ const fromData = (data: AppData): Omit<AppState, 'lastEntryId' | 'nextId' | 'toa
   tracking: data.tracking,
   workTimer: data.workTimer,
   calendar: data.calendar ?? null,
+  network: data.network,
+  makeups: data.makeups,
 });
 
 const upsertAttendance = (list: AttendanceRecord[], rec: AttendanceRecord): AttendanceRecord[] => [
@@ -216,6 +224,15 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, tasks: [...state.tasks, { ...action.task, id: state.nextId }], nextId: state.nextId + 1 };
     case 'taskCreated':
       return { ...state, tasks: [...state.tasks.filter((t) => t.id !== action.task.id), { ...action.task, doneAt: null }] };
+    case 'takeMakeup':
+      return {
+        ...state,
+        nextId: state.nextId + 1,
+        makeups: state.makeups.map((d) => (d.meetingId === action.meetingId && d.memberId === state.me.id ? { ...d, taskId: action.taskId } : d)),
+        tasks: state.tasks.map((t) =>
+          t.id === action.taskId ? withHistory({ ...t, owner: state.me.id }, { who: action.who, text: 'took it to make up for a missed meeting', when: 'just now' }, state.nextId) : t,
+        ),
+      };
     case 'reorderTasks': {
       const pos = new Map(action.ids.map((id, i) => [id, i]));
       return { ...state, tasks: state.tasks.map((t) => (pos.has(t.id) ? { ...t, rank: pos.get(t.id) } : t)) };
@@ -366,6 +383,9 @@ const persist = async (action: Action, before: AppState | null): Promise<number 
       });
       return null;
     }
+    case 'takeMakeup':
+      await api.takeMakeup(action.meetingId, action.taskId);
+      return null;
     case 'reorderTasks': {
       const ids = action.ids.filter((id) => id > 0);
       if (ids.length) await api.reorderTasks(ids);

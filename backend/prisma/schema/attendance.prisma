@@ -24,6 +24,22 @@ model AttendanceRecord {
   /// Why the member could not come (given before the meeting or when answering "did you attend?").
   reason      String?
   updatedAt   DateTime         @updatedAt
+  makeup      MakeupDuty?
+
+  @@id([meetingId, memberId])
+  @@index([memberId])
+}
+
+/// A member missed a meeting and owes one General task, picked within MAKEUP_DAYS of the meeting.
+model MakeupDuty {
+  meetingId String
+  memberId  String
+  record    AttendanceRecord @relation(fields: [meetingId, memberId], references: [meetingId, memberId], onDelete: Cascade)
+  dueOn     DateTime         @db.Date
+  /// The General task the member picked; null while it is still owed.
+  taskId    Int?
+  task      Task?            @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdAt DateTime         @default(now())
 
   @@id([meetingId, memberId])
   @@index([memberId])

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { me, requireAdmin } from '../../core/auth';
 import { forbidden } from '../../core/errors';
 import { id, parse } from '../../core/validate';
+import { takeMakeup } from './makeup';
 import { fillPresent, listRecords, markSelf, meetingDetail, recordMeeting, reportAttendance, unmarkSelf } from './service';
 
 export const attendanceRouter = Router();
@@ -50,4 +51,10 @@ attendanceRouter.put('/meetings/:id/attendance', requireAdmin, async (req, res) 
 
 attendanceRouter.post('/meetings/:id/attendance/fill-present', requireAdmin, async (req, res) => {
   res.json(await fillPresent(String(req.params.id)));
+});
+
+/** Pick a General task for a meeting you missed. */
+attendanceRouter.post('/makeups/:meetingId/take', async (req, res) => {
+  const body = parse(z.object({ taskId: z.number().int().positive() }), req.body);
+  res.json(await takeMakeup(String(req.params.meetingId), me(req), body.taskId));
 });

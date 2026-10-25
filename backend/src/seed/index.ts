@@ -24,6 +24,7 @@ import { readSheet, text, toIsoDate } from './xlsx';
 import { SAMPLE_PROJECTS, SAMPLE_TASKS, type SampleTask } from './sample-projects';
 import { seedTeambuildings } from './teambuildings';
 import { seedDemoTasks } from './demo-tasks';
+import { seedGeneralTasks } from './general-tasks';
 
 const MATERIAL = process.env.SEED_MATERIAL_DIR ?? resolve(fileURLToPath(import.meta.url), '../../../../material');
 /** Attendance exists for every meeting before this date (SANDBOX.md). */
@@ -231,6 +232,7 @@ const main = async () => {
       // Made-up extras are idempotent, so existing databases get them too.
       const tb = await seedTeambuildings();
       const tasks = await seedDemoTasks();
+      await seedGeneralTasks();
       console.log(`The database already has data; not seeding. Added ${tb.records} teambuilding records, ${tasks} demo tasks.`);
       return;
     }
@@ -254,6 +256,8 @@ const main = async () => {
   const tb = await seedTeambuildings();
   console.log(`  teambuildings: ${tb.meetings} evenings, ${tb.records} attendance records`);
   console.log(`  demo tasks for this week: ${await seedDemoTasks()}`);
+  const general = await seedGeneralTasks();
+  console.log(`  general tasks: ${general.tasks}, make-up duties: ${general.duties}`);
 };
 
 main()

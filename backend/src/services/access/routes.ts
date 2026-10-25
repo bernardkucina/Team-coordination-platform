@@ -8,7 +8,8 @@ import type { Member as DbMember } from '@prisma/client';
 import type { AccessMember } from '@hub-pulse/shared';
 import { requireSuperAdmin } from '../../core/auth';
 import { parse } from '../../core/validate';
-import { createMember, listMembers, setAccess, setSlackEmail, tierFromName, tierName } from '../members';
+import { clientIp } from '../../core/network';
+import { addHubAddress, createMember, hubWifi, listMembers, removeHubAddress, setAccess, setSlackEmail, tierFromName, tierName } from '../members';
 import { addToHubWideSeries } from '../meetings';
 
 export const accessRouter = Router();
@@ -50,4 +51,22 @@ accessRouter.patch('/access/members/:id', async (req, res) => {
   });
   if (body.slackEmail !== undefined) member = await setSlackEmail(id, body.slackEmail || null);
   res.json(toAccess(member));
+});
+
+/* ---------- hub wifi: where members can log time "in the hub" ---------- */
+
+accessRouter.get('/access/hub-wifi', async (req, res) => {
+  res.json(await hubWifi(clientIp(req)));
+});
+
+/** Saves an address (default: the one you are on now) as the hub wifi. */
+accessRouter.post('/access/hub-wifi', async (req, res) => {
+  const body = parse(z.object({ ip: z.string().trim().max(64).optional(), label: z.string().trim().max(80).optional() }).strict(), req.body ?? {});
+  await addHubAddress(body.ip || clientIp(req), body.label ?? '');
+  res.json(await hubWifi(clientIp(req)));
+});
+
+accessRouter.delete('/access/hub-wifi/:ip', async (req, res) => {
+  await removeHubAddress(String(req.params.ip));
+  res.json(await hubWifi(clientIp(req)));
 });

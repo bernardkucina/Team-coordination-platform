@@ -3,7 +3,7 @@
  * The frontend and backend both import these, so a contract change breaks the build, not the demo.
  */
 import type {
-  AreaId, AttendanceRecord, AttendanceStatus, Meeting, MeetingSeries, Member, Priority, Project, ProjectRole, Role, Task, TaskLink,
+  AreaId, AttendanceRecord, AttendanceStatus, HubNetwork, MakeupDuty, Meeting, MeetingSeries, Member, Priority, Project, ProjectRole, Role, Task, TaskLink,
   TaskStatus, Tier, TimeEntry, Tracking, WorkLocation, WorkTimer,
 } from './domain';
 
@@ -108,6 +108,23 @@ export interface AppData {
   workTimer: WorkTimer | null;
   /** Admins only: the last calendar sync. */
   calendar?: CalendarSyncStatus;
+  /** Whether this browser is on the hub wifi. */
+  network: HubNetwork;
+  /** Members get their own make-up duties; admins get everyone's. */
+  makeups: MakeupDuty[];
+}
+
+/** POST /api/makeups/:meetingId/take: pick a General task for a missed meeting. */
+export interface TakeMakeupRequest {
+  taskId: number;
+}
+
+/** GET /api/access/hub-wifi (super admin): the saved hub wifi addresses and the one you are on now. */
+export interface HubWifiResponse {
+  current: string;
+  /** From HUB_IPS; can't be removed here. */
+  fromConfig: string[];
+  addresses: { ip: string; label: string; createdAt: string }[];
 }
 
 /* ---------- projects ---------- */

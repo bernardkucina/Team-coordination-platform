@@ -5,6 +5,7 @@ import { CURRENT_WEEK, DEMO_TODAY, longDate } from '@/lib/time';
 import { HoursCard } from '@/components/HoursCard';
 import { DidYouAttend, TodayMeetings } from '@/components/Meetings';
 import { MyTasks } from '@/components/MyTasks';
+import { MakeupCard } from '@/components/GeneralTasks';
 import { SlackCard } from '@/components/SlackCard';
 import { TrackMeetingButton, TrackingBanner } from '@/components/Tracking';
 
@@ -28,6 +29,7 @@ export default function TodayPage() {
           {/* Today's meetings come first for everyone, then tasks. */}
           <TodayMeetings />
           <DidYouAttend />
+          <MakeupCard />
           <MyTasks />
           {isAdmin ? <SlackCard /> : null}
         </div>

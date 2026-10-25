@@ -10,12 +10,14 @@ import { Avatar, Icon } from './ui';
 const MEMBER_NAV = [
   { href: '/today', label: 'Today', icon: Icon.sun },
   { href: '/projects', label: 'Projects', icon: Icon.board },
+  { href: '/general', label: 'General tasks', icon: Icon.checklist },
   { href: '/analytics', label: 'Pulse', icon: Icon.chart },
 ];
 
 const ADMIN_NAV = [
   { href: '/today', label: 'Today', icon: Icon.sun },
   { href: '/projects', label: 'Projects', icon: Icon.board },
+  { href: '/general', label: 'General tasks', icon: Icon.checklist },
   { href: '/team', label: 'Team', icon: Icon.team },
   { href: '/analytics', label: 'Pulse', icon: Icon.chart },
 ];

@@ -14,7 +14,10 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
   const { state, dispatch, me, isAdmin, flash } = useStore();
   const [projectId, setProjectId] = useState(state.projects.filter((p) => p.status === 'active')[0]?.id ?? 'ops');
   // Where the work happens; the brief's leader wants to see time in the hub versus remote.
-  const [where, setWhere] = useState<WorkLocation>('hub');
+  // "In the hub" only on the Impact Hub wifi (the server checks it too); the check is off until an address is saved.
+  const hubAllowed = !state.network.checked || state.network.atHub;
+  const [chosen, setWhere] = useState<WorkLocation>('hub');
+  const where: WorkLocation = hubAllowed ? chosen : 'remote';
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [daysBack, setDaysBack] = useState(0);
@@ -101,10 +104,16 @@ export function HoursCard({ title = 'Hours this week' }: { title?: string }) {
           <span className={where === 'hub' ? 'on' : ''} aria-hidden="true">In the hub</span>
           <button
             type="button" role="switch" className="switch" aria-checked={where === 'remote'} aria-label="Working remotely"
-            onClick={() => setWhere(where === 'remote' ? 'hub' : 'remote')}
+            onClick={() => setWhere(where === 'remote' ? 'hub' : 'remote')} disabled={!hubAllowed}
+            aria-describedby={hubAllowed ? undefined : 'hub-wifi-note'}
           ><span /></button>
           <span className={where === 'remote' ? 'on' : ''} aria-hidden="true">Remote</span>
         </div>
+        {state.network.checked ? (
+          <span id="hub-wifi-note" className="tiny muted">
+            {hubAllowed ? 'You are on the Impact Hub wifi.' : '"In the hub" is only available on the Impact Hub wifi.'}
+          </span>
+        ) : null}
         <div className="inline" style={{ flexWrap: 'nowrap' }}>
           <label className="sr-only" htmlFor="log-project">Project</label>
           <select id="log-project" className="field select-plain" style={{ flex: '1 1 auto', minWidth: 0, minHeight: 40, fontSize: 14, borderWidth: 1.5, textAlign: 'left', textAlignLast: 'left', textOverflow: 'ellipsis' }} value={projectId} onChange={(e) => setProjectId(e.target.value)}>

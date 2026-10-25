@@ -34,6 +34,8 @@ export const config = {
     /** Only for tests against a fake Slack. */
     apiUrl: process.env.SLACK_API_URL || 'https://slack.com/api',
   },
+  /** Public addresses of the Impact Hub wifi, comma separated (more can be saved by the super admin). */
+  hubIps: (process.env.HUB_IPS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
   /** Vercel Cron sends "Authorization: Bearer <CRON_SECRET>" to /api/cron/daily. */
   cronSecret: process.env.CRON_SECRET || null,
   /** Public address of the app, for links in Slack messages. */
